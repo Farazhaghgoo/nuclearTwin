@@ -1,255 +1,659 @@
 <!DOCTYPE html>
-<html class="light" lang="en">
+<html lang="en">
 <head>
-    <meta charset="utf-8"/>
-    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-    <title>CORE-SENTINEL HMI | Digital Twin Dashboard</title>
-    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;700;900&family=Inter:wght@400;600;700&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet"/>
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
-    <script id="tailwind-config">
-        tailwind.config = {
-            darkMode: "class",
-            theme: {
-                extend: {
-                    colors: {
-                        background: "#e4e4e4",
-                        surface: "#f0f0f0",
-                        surface_alt: "#d0d0d0",
-                        text_primary: "#2a2a2a",
-                        text_secondary: "#555555",
-                        border: "#aaaaaa",
-                        alarm_p1: "#ff0000",
-                        alarm_p2: "#ffff00",
-                        alarm_p3: "#ffa500",
-                        accent: "#444444",
-                    },
-                    fontFamily: {
-                        sans: ['Inter', 'sans-serif'],
-                        mono: ['Courier New', 'monospace'],
-                        headline: ['Public Sans', 'sans-serif'],
-                    }
-                }
-            }
-        }
-    </script>
-    <style>
-        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; display: inline-block; line-height: 1; }
-        body { background-color: #e4e4e4; color: #2a2a2a; font-family: 'Inter', sans-serif; overflow: hidden; }
-        .telemetry-value { font-family: 'Courier New', monospace; font-weight: bold; }
-        .log-text { font-family: 'Courier New', monospace; font-size: 0.85rem; }
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: #d0d0d0; }
-        ::-webkit-scrollbar-thumb { background: #888888; }
-        .mfe-container { display: none; }
-        .mfe-container.active { display: flex; }
-    </style>
+<meta charset="utf-8"/>
+<meta content="width=device-width,initial-scale=1.0" name="viewport"/>
+<title>CORE-SENTINEL | InRebus DAO — LFR-4G HMI</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<style>
+  .ms{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;display:inline-block;line-height:1;vertical-align:middle}
+  body{background:#0f1114;color:#e0e4e8;font-family:'Inter',sans-serif;overflow:hidden}
+  .tv{font-family:'Courier New',monospace}
+  .log{font-family:'Courier New',monospace;font-size:.72rem}
+  ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:#1a1d21}::-webkit-scrollbar-thumb{background:#3a4050}
+
+  /* ISA-101 alarm colors */
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+  .blink{animation:blink 1s infinite}
+  @keyframes blink-fast{0%,100%{opacity:1}50%{opacity:.1}}
+  .blink-fast{animation:blink-fast .5s infinite}
+  @keyframes scram-glow{0%,100%{box-shadow:0 0 0 0 rgba(255,32,32,.55)}50%{box-shadow:0 0 0 16px rgba(255,32,32,0)}}
+  .scram-btn{animation:scram-glow 2s infinite}
+  @keyframes emergency-pulse{0%,100%{background:#1f0808}50%{background:#2a0a0a}}
+  .emergency-bg{animation:emergency-pulse .8s infinite}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  .fade-in{animation:fadeIn .3s ease forwards}
+
+  /* Panel routing */
+  .panel{display:none;flex-direction:column;flex:1;overflow:hidden}
+  .panel.active{display:flex}
+
+  /* Nav active states */
+  .nav-s.active{background:#22262b;border-right:3px solid #e0e4e8;color:#e0e4e8}
+  .nav-t.active{border-bottom:2px solid #e0e4e8;color:#e0e4e8}
+
+  /* Audit slide panel */
+  #audit-panel{transition:transform .25s ease}
+  #audit-panel.open{transform:translateX(0)}
+
+  /* Role overlay */
+  #role-overlay{background:radial-gradient(ellipse at center,#1a1d21 0%,#050608 100%)}
+
+  /* ISA-101 chart styles */
+  .chart-rt{fill:none;stroke:#e0e4e8;stroke-width:1.8}
+  .chart-pred{fill:none;stroke:#7a8590;stroke-width:1.3;stroke-dasharray:4,3}
+  .chart-trip{fill:none;stroke:#ff2020;stroke-width:.9;stroke-dasharray:3,3;opacity:.6}
+
+  /* P&ID styles */
+  .pid-pipe{stroke:#7a8590;stroke-width:3;fill:none}
+  .pid-hot{stroke:#ff8020;stroke-width:3;fill:none;opacity:.85}
+  .pid-box{fill:#2a2f36;stroke:#5a6573;stroke-width:1.5}
+
+  /* Sensor table */
+  .sr:hover{background:#22262b}
+
+  /* Demo bar slide */
+  #demo-bar{transition:height .3s ease,opacity .3s ease}
+
+  /* Power meter */
+  @keyframes power-glow{0%,100%{opacity:.8}50%{opacity:1}}
+  .power-bar-fill{animation:power-glow 2s infinite;transition:width .8s ease}
+
+  /* Countdown flash near zero */
+  .countdown-critical{color:#ff2020;animation:blink-fast .5s infinite}
+
+  /* Emergency Three.js overlay */
+  #three-emergency-overlay{pointer-events:none;transition:opacity .5s ease}
+</style>
 </head>
-<body class="flex flex-col h-screen text-text_primary">
-    <!-- Role Selector Overlay -->
-    <div id="role-selector" class="fixed inset-0 bg-[#000000]/80 z-[200] flex items-center justify-center backdrop-blur-sm">
-        <div class="bg-surface border-2 border-border p-6 min-w-[400px] shadow-2xl flex flex-col gap-4">
-            <h2 class="font-headline font-bold text-xl uppercase text-center border-b border-border pb-2">Select Operator Role</h2>
-            <button class="role-btn bg-surface_alt hover:bg-border p-3 border border-border text-left font-bold" data-role="OL">Local Operator (OL) - Monitoring</button>
-            <button class="role-btn bg-surface_alt hover:bg-border p-3 border border-border text-left font-bold" data-role="OD">Diagnostic Operator (OD) - Interactivity</button>
-            <button class="role-btn bg-surface_alt hover:bg-border p-3 border border-border text-left font-bold" data-role="AS">System Admin (AS) - Configuration</button>
+<body class="flex flex-col h-screen overflow-hidden">
+
+<!-- ══════════════════════════════════════════════════════════
+     ROLE SELECTION OVERLAY
+     ══════════════════════════════════════════════════════════ -->
+<div id="role-overlay" class="fixed inset-0 z-[200] flex items-center justify-center">
+  <div class="w-[480px]">
+    <div class="text-center mb-10">
+      <div class="tv text-[10px] text-[#4a5260] tracking-[.4em] uppercase mb-3">InRebus DAO · LFR-4G Unit 4 · ISA-101 Compliant</div>
+      <h1 class="text-[#e0e4e8] text-3xl font-black tracking-widest uppercase mb-2">CORE-SENTINEL</h1>
+      <div class="tv text-[11px] text-[#4a5260] tracking-widest">Authentication Required — Select Operator Role</div>
+    </div>
+    <div class="space-y-2.5">
+      <button class="role-btn w-full flex items-center gap-4 p-4 border border-[rgba(255,255,255,.08)] hover:border-[rgba(255,255,255,.25)] hover:bg-[#22262b] transition-all text-left group" data-role="OL">
+        <span class="ms material-symbols-outlined text-[#4a5260] group-hover:text-[#e0e4e8] text-2xl transition-colors">visibility</span>
+        <div>
+          <div class="tv font-bold text-sm tracking-wider uppercase text-[#e0e4e8]">Local Operator — OL</div>
+          <div class="tv text-[11px] text-[#4a5260] mt-0.5">Plant monitoring, alarm management, read-only telemetry</div>
         </div>
+      </button>
+      <button class="role-btn w-full flex items-center gap-4 p-4 border border-[rgba(255,255,255,.08)] hover:border-[rgba(255,255,255,.25)] hover:bg-[#22262b] transition-all text-left group" data-role="OD">
+        <span class="ms material-symbols-outlined text-[#4a5260] group-hover:text-[#e0e4e8] text-2xl transition-colors">biotech</span>
+        <div>
+          <div class="tv font-bold text-sm tracking-wider uppercase text-[#e0e4e8]">Diagnostic Operator — OD</div>
+          <div class="tv text-[11px] text-[#4a5260] mt-0.5">Digital Twin control, simulation management, AI Copilot, SCRAM authority</div>
+        </div>
+      </button>
+      <button class="role-btn w-full flex items-center gap-4 p-4 border border-[rgba(255,255,255,.08)] hover:border-[rgba(255,255,255,.25)] hover:bg-[#22262b] transition-all text-left group" data-role="AS">
+        <span class="ms material-symbols-outlined text-[#4a5260] group-hover:text-[#e0e4e8] text-2xl transition-colors">admin_panel_settings</span>
+        <div>
+          <div class="tv font-bold text-sm tracking-wider uppercase text-[#e0e4e8]">System Admin — AS</div>
+          <div class="tv text-[11px] text-[#4a5260] mt-0.5">Full configuration, interlock override, audit management, SCRAM authority</div>
+        </div>
+      </button>
+    </div>
+    <div class="text-center tv text-[#4a5260] text-[9px] tracking-widest uppercase mt-8">Protocol v4.2 · AES-512 · IAEA Compliant · Politecnico Physics Model v3.1</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     HEADER
+     ══════════════════════════════════════════════════════════ -->
+<header class="flex-shrink-0 h-14 bg-[#1a1d21] border-b border-[rgba(255,255,255,.08)] flex items-center justify-between px-5 z-50">
+  <div class="flex items-center gap-5 h-full">
+    <div class="flex items-center gap-2">
+      <span class="ms material-symbols-outlined text-[#5a6573] text-lg">hub</span>
+      <span class="tv font-black tracking-widest text-sm uppercase text-[#e0e4e8]">CORE-SENTINEL</span>
+    </div>
+    <nav class="flex h-full items-center">
+      <button class="nav-t active tv text-[11px] px-3 h-full border-b-2 border-[#e0e4e8] text-[#e0e4e8] uppercase font-bold" data-panel="panel-primary">Reactor</button>
+      <button class="nav-t tv text-[11px] px-3 h-full border-b-2 border-transparent text-[#4a5260] hover:text-[#7a8590] uppercase font-bold" data-panel="panel-secondary">Coolant</button>
+      <button class="nav-t tv text-[11px] px-3 h-full border-b-2 border-transparent text-[#4a5260] hover:text-[#7a8590] uppercase font-bold" data-panel="panel-safety">Safety</button>
+      <button class="nav-t tv text-[11px] px-3 h-full border-b-2 border-transparent text-[#4a5260] hover:text-[#7a8590] uppercase font-bold" data-panel="panel-ai">AI Copilot</button>
+      <button class="nav-t tv text-[11px] px-3 h-full border-b-2 border-transparent text-[#4a5260] hover:text-[#7a8590] uppercase font-bold" data-panel="panel-diagnostics">Diagnostics</button>
+    </nav>
+  </div>
+
+  <div class="flex items-center gap-2">
+    <!-- Reactor Power Gauge -->
+    <div class="flex items-center gap-2 px-3 py-1.5 border border-[rgba(255,255,255,.08)] bg-[#22262b]">
+      <div class="tv text-[9px] text-[#4a5260] uppercase">PWR</div>
+      <div class="w-28 h-2 bg-[#0f1114] relative rounded-sm overflow-hidden">
+        <div id="power-bar" class="power-bar-fill h-full bg-[#20c060] rounded-sm" style="width:95.6%"></div>
+      </div>
+      <div class="tv text-[10px] font-bold text-[#e0e4e8]" id="power-pct">95.6%</div>
     </div>
 
-    <!-- Alarm Banner MFE -->
-    <div id="mfe-alarm-banner" class="w-full bg-surface border-b border-border h-10 flex items-center justify-between px-4 z-50 hidden">
-        <div class="flex items-center gap-4 text-sm font-bold bg-surface px-2 py-1 border border-border h-full w-full">
-            <span class="material-symbols-outlined text-[18px]">warning</span>
-            <marquee id="alarm-marquee" class="telemetry-value w-full" scrollamount="5">SYSTEM NOMINAL</marquee>
-        </div>
+    <!-- System Health -->
+    <div id="sys-status" class="flex items-center gap-2 px-3 py-1.5 border border-[rgba(255,255,255,.08)] bg-[#22262b]">
+      <div class="w-1.5 h-1.5 rounded-full bg-[#20c060] animate-pulse" id="sys-dot"></div>
+      <span class="tv text-[10px] tracking-widest" id="sys-label" style="color:#7a8590">SYSTEM READY</span>
     </div>
 
-    <!-- Top Navigation -->
-    <header class="bg-surface text-text_primary font-headline font-bold uppercase h-14 flex justify-between items-center w-full px-6 z-40 border-b border-border">
-        <div class="flex items-center gap-8 h-full">
-            <span class="text-lg tracking-widest">InRebus DAO HMI</span>
-            <nav class="hidden md:flex gap-4 h-full items-end" id="top-nav">
-                <button class="nav-top active border-b-4 border-accent pb-2 px-2" data-target="mfe-reactor">Reactor</button>
-                <button class="nav-top border-b-4 border-transparent hover:border-border pb-2 px-2 text-text_secondary" data-target="mfe-coolant">Coolant</button>
-            </nav>
-        </div>
-        <div class="flex gap-2">
-            <span id="current-role-display" class="border border-border px-2 py-1 text-xs font-bold bg-surface_alt flex items-center gap-2">
-               ROLE: --
-            </span>
-            <button id="btn-audit" class="p-2 border border-border hover:bg-border transition-colors"><span class="material-symbols-outlined text-[18px]">list_alt</span></button>
-            <button id="btn-settings" class="p-2 border border-border hover:bg-border transition-colors role-gated" data-allowed="AS"><span class="material-symbols-outlined text-[18px]">settings</span></button>
-            <button id="btn-logout" class="p-2 border border-border hover:bg-border transition-colors"><span class="material-symbols-outlined text-[18px]">logout</span></button>
-        </div>
-    </header>
-
-    <div class="flex flex-1 overflow-hidden">
-        <!-- Side Navigation -->
-        <aside class="bg-surface_alt text-text_primary w-56 z-30 flex flex-col border-r border-border">
-            <nav class="flex-1 py-4 flex flex-col gap-1" id="side-nav">
-                <button class="nav-side active bg-surface border-r-4 border-accent text-left px-4 py-3 font-bold flex gap-2 items-center" data-target="mfe-reactor">
-                    <span class="material-symbols-outlined">vibration</span> Primary Circuit
-                </button>
-                <button class="nav-side text-text_secondary hover:bg-border border-r-4 border-transparent text-left px-4 py-3 font-bold flex gap-2 items-center" data-target="mfe-secondary">
-                    <span class="material-symbols-outlined">cyclone</span> Secondary Circuit
-                </button>
-                <button class="nav-side text-text_secondary hover:bg-border border-r-4 border-transparent text-left px-4 py-3 font-bold flex gap-2 items-center" data-target="mfe-safety">
-                    <span class="material-symbols-outlined">verified_user</span> Safety
-                </button>
-                <button class="nav-side text-text_secondary hover:bg-border border-r-4 border-transparent text-left px-4 py-3 font-bold flex gap-2 items-center" data-target="mfe-ai">
-                    <span class="material-symbols-outlined">psychology</span> AI Copilot
-                </button>
-            </nav>
-        </aside>
-
-        <!-- Main Content -->
-        <main class="flex-1 bg-background overflow-hidden relative">
-            <!-- MFE: Reactor (Digital Twin + Charts) -->
-            <div id="mfe-reactor" class="mfe-container active flex-col h-full w-full">
-                <div class="flex h-[60%] border-b border-border">
-                    <div class="w-2/3 bg-surface border-r border-border relative flex flex-col">
-                        <div class="p-2 border-b border-border bg-surface_alt flex justify-between">
-                            <span class="font-bold text-sm uppercase">Digital Twin [RT-SIM-LFR]</span>
-                            <div class="flex gap-2">
-                                <button id="btn-camera-toggle" class="border border-border px-2 text-xs font-bold bg-surface hover:bg-border">TOGGLE CAMERA</button>
-                            </div>
-                        </div>
-                        <div id="three-container" class="flex-1 bg-[#d5d5d5] relative cursor-crosshair"></div>
-                        <!-- Overlay telemetry -->
-                        <div class="absolute top-12 left-4 bg-surface/80 border border-border p-2 min-w-[150px]">
-                            <div class="text-xs font-bold uppercase">Core Temp</div>
-                            <div class="telemetry-value text-xl" id="ui-core-temp">---.-</div>
-                        </div>
-                        <!-- Controls overlay (OD Role only) -->
-                        <div class="absolute bottom-4 right-4 bg-surface/90 border border-border p-2 flex flex-col gap-2 role-gated" data-allowed="OD,AS">
-                            <div class="text-xs font-bold uppercase border-b border-border pb-1">Control Rods</div>
-                            <input type="range" id="rod-control" min="0" max="100" value="50" class="w-32 accent-accent cursor-pointer">
-                            <div class="flex justify-between text-xs font-mono"><span>0%</span><span id="rod-val">50%</span><span>100%</span></div>
-                            <button id="btn-scram" class="mt-2 bg-alarm_p1 text-white font-bold py-1 px-2 hover:bg-red-800 text-xs">MANUAL SCRAM</button>
-                        </div>
-                    </div>
-                    <div class="w-1/3 bg-surface flex flex-col">
-                        <div class="p-2 border-b border-border bg-surface_alt">
-                            <span class="font-bold text-sm uppercase">AI Diagnostic Feed</span>
-                        </div>
-                        <div class="flex-1 p-2 overflow-y-auto log-text" id="ai-feed">
-                            <!-- Populated by JS -->
-                        </div>
-                    </div>
-                </div>
-                <div class="h-[40%] bg-surface p-4 flex flex-col">
-                    <div class="flex justify-between items-center mb-2">
-                        <span class="font-bold text-sm uppercase">Predictive Telemetry (Ghosting)</span>
-                        <div class="flex gap-4 text-xs font-bold">
-                            <span class="flex items-center gap-1"><div class="w-4 h-1 bg-text_primary"></div> Real-time</span>
-                            <span class="flex items-center gap-1"><div class="w-4 h-1 border-b-2 border-dashed border-text_secondary"></div> Predicted</span>
-                            <span class="flex items-center gap-1"><div class="w-4 h-1 bg-alarm_p1"></div> Trip Limit</span>
-                        </div>
-                    </div>
-                    <div class="flex-1 border border-border relative overflow-hidden" id="chart-container">
-                        <!-- SVG chart injected by JS -->
-                        <svg class="absolute inset-0 w-full h-full" id="predictive-chart" preserveAspectRatio="none" viewBox="0 0 100 100">
-                            <!-- Content injected via JS -->
-                        </svg>
-                    </div>
-                </div>
-            </div>
-
-            <!-- MFE: Secondary Circuit (Sensor Table) -->
-            <div id="mfe-secondary" class="mfe-container flex-col h-full w-full p-6">
-                <h2 class="font-bold text-xl uppercase mb-4 border-b border-border pb-2">Secondary Loop Sensors</h2>
-                <div class="bg-surface border border-border flex-1 overflow-auto">
-                    <table class="w-full text-left text-sm whitespace-nowrap">
-                        <thead class="bg-surface_alt border-b border-border sticky top-0 font-bold uppercase">
-                            <tr>
-                                <th class="p-3">Sensor ID</th>
-                                <th class="p-3">Type</th>
-                                <th class="p-3">Value</th>
-                                <th class="p-3">Unit</th>
-                                <th class="p-3">Status</th>
-                            </tr>
-                        </thead>
-                        <tbody id="sensor-table-body" class="telemetry-value">
-                            <!-- Populated by JS -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- MFE: Safety / Interlocks -->
-            <div id="mfe-safety" class="mfe-container flex-col h-full w-full p-6">
-                <h2 class="font-bold text-xl uppercase mb-4 border-b border-border pb-2">Safety Systems & Interlocks</h2>
-                <div class="grid grid-cols-2 gap-6 h-full">
-                    <div class="bg-surface border border-border p-4 flex flex-col gap-4">
-                        <h3 class="font-bold uppercase bg-surface_alt p-2 border border-border">Trip Logic Status</h3>
-                        <div class="flex items-center justify-between border-b border-border pb-2">
-                            <span>Overspeed Protection</span><div class="w-4 h-4 bg-[#888888]"></div>
-                        </div>
-                        <div class="flex items-center justify-between border-b border-border pb-2">
-                            <span>High Temp Trip</span><div class="w-4 h-4 bg-[#888888]"></div>
-                        </div>
-                        <div class="flex items-center justify-between border-b border-border pb-2">
-                            <span>Low Coolant FLow</span><div class="w-4 h-4 bg-[#888888]"></div>
-                        </div>
-                        <div class="mt-auto">
-                            <button id="btn-depressurize" class="w-full bg-alarm_p2 text-text_primary font-bold p-3 border border-border role-gated hover:bg-yellow-600" data-allowed="OD,AS">EMERGENCY DEPRESSURIZE</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- MFE: AI Copilot -->
-            <div id="mfe-ai" class="mfe-container flex-col h-full w-full p-6">
-                 <h2 class="font-bold text-xl uppercase mb-4 border-b border-border pb-2">Agentic Copilot Inquiry</h2>
-                 <div class="bg-surface border border-border flex-1 flex flex-col">
-                     <div id="ai-chat" class="flex-1 p-4 log-text overflow-y-auto flex flex-col gap-2">
-                         <div class="bg-surface_alt p-2 border border-border self-start">Copilot initialized. Standing by for queries.</div>
-                     </div>
-                     <div class="p-2 border-t border-border flex gap-2">
-                         <input type="text" id="ai-input" class="flex-1 border border-border p-2 font-mono text-sm" placeholder="Ask copilot...">
-                         <button id="btn-ai-send" class="bg-surface_alt border border-border px-4 font-bold hover:bg-border uppercase">Send</button>
-                     </div>
-                 </div>
-            </div>
-
-            <!-- Slide-in Audit Log -->
-            <div id="audit-panel" class="absolute top-0 right-0 w-[400px] h-full bg-surface border-l border-border transform translate-x-full transition-transform duration-300 z-40 flex flex-col shadow-[-5px_0_15px_rgba(0,0,0,0.1)]">
-                <div class="p-4 border-b border-border flex justify-between items-center bg-surface_alt">
-                    <h3 class="font-headline font-bold uppercase">Audit Trail</h3>
-                    <button id="btn-audit-close" class="hover:bg-border p-1"><span class="material-symbols-outlined">close</span></button>
-                </div>
-                <div class="flex-1 overflow-y-auto p-2 log-text flex flex-col gap-1" id="audit-log-content">
-                    <!-- Logs injected via JS -->
-                </div>
-                <div class="p-2 border-t border-border">
-                    <button id="btn-export-log" class="w-full bg-surface_alt border border-border p-2 font-bold uppercase hover:bg-border text-xs">Export CSV</button>
-                </div>
-            </div>
-        </main>
+    <!-- Role Badge -->
+    <div class="flex items-center gap-1.5 px-3 py-1.5 border border-[rgba(255,255,255,.08)] bg-[#22262b]">
+      <span class="tv text-[10px] text-[#4a5260]">ROLE:</span>
+      <span class="tv text-[10px] font-black text-[#e0e4e8]" id="role-badge">---</span>
     </div>
 
-    <!-- Footer -->
-    <footer class="bg-surface h-8 border-t border-border flex justify-between items-center px-4 font-mono text-[10px] text-text_secondary uppercase">
-        <div>InRebus DAO HMI - Protocol v4.2</div>
-        <div class="flex gap-4">
-            <span id="footer-status">SYSTEM OK</span>
-            <span id="utc-clock">00:00:00:000 UTC</span>
-        </div>
-    </footer>
+    <!-- Action Buttons -->
+    <button id="btn-tree" title="System Topology" class="w-8 h-8 flex items-center justify-center border border-[rgba(255,255,255,.08)] hover:bg-[#22262b] transition-colors">
+      <span class="ms material-symbols-outlined text-[#7a8590] text-[17px]">account_tree</span>
+    </button>
+    <button id="btn-settings" title="HMI Configuration" class="w-8 h-8 flex items-center justify-center border border-[rgba(255,255,255,.08)] hover:bg-[#22262b] transition-colors">
+      <span class="ms material-symbols-outlined text-[#7a8590] text-[17px]">settings</span>
+    </button>
+    <button id="btn-audit-hdr" title="Audit Trail" class="w-8 h-8 flex items-center justify-center border border-[rgba(255,255,255,.08)] hover:bg-[#22262b] transition-colors relative">
+      <span class="ms material-symbols-outlined text-[#7a8590] text-[17px]">history</span>
+      <span class="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-[#5a6573] tv text-[8px] font-bold flex items-center justify-center text-white" id="audit-badge">0</span>
+    </button>
 
-    <!-- Global Modal -->
-    <div id="modal-container" class="fixed inset-0 bg-[#000000]/60 z-[100] flex items-center justify-center backdrop-blur-sm hidden">
-         <div class="bg-surface border-2 border-border p-4 min-w-[300px] shadow-xl flex flex-col gap-4">
-             <h3 id="modal-title" class="font-bold uppercase border-b border-border pb-1">Modal</h3>
-             <div id="modal-content" class="log-text"></div>
-             <div class="flex justify-end gap-2 mt-2">
-                 <button id="modal-btn-cancel" class="border border-border px-3 py-1 bg-surface_alt hover:bg-border uppercase text-xs font-bold">Cancel</button>
-                 <button id="modal-btn-confirm" class="border border-border px-3 py-1 bg-accent text-surface hover:bg-text_primary uppercase text-xs font-bold">Confirm</button>
-             </div>
-         </div>
+    <!-- DEMO BUTTON — prominent, always visible -->
+    <button id="btn-demo" title="Emergency Scenario Simulator" class="flex items-center gap-1.5 px-3 py-1.5 border border-[#ff8020]/50 bg-[#ff8020]/10 hover:bg-[#ff8020]/20 text-[#ff8020] transition-colors">
+      <span class="ms material-symbols-outlined text-[15px]">science</span>
+      <span class="tv text-[10px] font-bold uppercase tracking-wider">DEMO</span>
+    </button>
+
+    <button id="btn-logout" title="End Session" class="w-8 h-8 flex items-center justify-center border border-[rgba(255,255,255,.08)] hover:bg-[#22262b] transition-colors">
+      <span class="ms material-symbols-outlined text-[#ff2020] text-[17px]">logout</span>
+    </button>
+  </div>
+</header>
+
+<!-- ══════════════════════════════════════════════════════════
+     ALARM BANNER (ISA-101: P1=Red, P2=Yellow, P3=Orange)
+     ══════════════════════════════════════════════════════════ -->
+<div id="alarm-banner" class="flex-shrink-0 overflow-hidden" style="height:0;transition:height .3s ease">
+  <div class="h-9 flex items-center justify-between px-5" id="alarm-inner">
+    <div class="flex items-center gap-3 overflow-hidden">
+      <span class="ms material-symbols-outlined text-[16px] blink flex-shrink-0" id="alarm-icon">warning</span>
+      <div class="tv text-xs font-bold tracking-wider truncate" id="alarm-text">---</div>
+    </div>
+    <div class="flex gap-2 flex-shrink-0 ml-4">
+      <button id="btn-ack-all" class="tv text-[10px] px-2 py-0.5 border font-bold uppercase tracking-wider hover:opacity-70 transition-opacity">ACK ALL</button>
+      <button id="btn-dismiss-banner" class="tv text-[10px] px-2 py-0.5 border border-[rgba(255,255,255,.15)] text-[#7a8590] font-bold uppercase hover:text-[#e0e4e8] transition-colors">DISMISS</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     DEMO SCENARIO BAR (hidden until scenario active)
+     ══════════════════════════════════════════════════════════ -->
+<div id="demo-bar" class="flex-shrink-0 overflow-hidden" style="height:0;transition:height .3s ease">
+  <div class="h-10 flex items-center justify-between px-5 border-b" id="demo-inner" style="border-color:rgba(255,128,32,.3);background:#1a1000">
+    <div class="flex items-center gap-3">
+      <span class="ms material-symbols-outlined text-[#ff8020] text-[16px] blink">science</span>
+      <span class="tv text-[10px] text-[#ff8020] font-bold uppercase tracking-wider">DEMO MODE</span>
+      <span class="tv text-[11px] text-[#e0e4e8]" id="demo-bar-text">---</span>
+    </div>
+    <div class="flex items-center gap-3">
+      <div class="tv text-[10px] text-[#7a8590]">Time to trip: <span id="demo-countdown" class="font-bold text-[#e0e4e8]">--:--</span></div>
+      <button id="btn-demo-reset" class="tv text-[9px] px-3 py-1 border border-[rgba(255,255,255,.15)] text-[#7a8590] font-bold uppercase tracking-wider hover:text-[#e0e4e8] hover:border-[rgba(255,255,255,.3)] transition-colors">RESET TO NOMINAL</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     BODY: SIDEBAR + MAIN
+     ══════════════════════════════════════════════════════════ -->
+<div class="flex flex-1 overflow-hidden">
+
+  <!-- SIDEBAR -->
+  <aside class="flex-shrink-0 w-56 bg-[#1a1d21] border-r border-[rgba(255,255,255,.08)] flex flex-col">
+    <div class="p-4 border-b border-[rgba(255,255,255,.08)]">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 bg-[#22262b] border border-[rgba(255,255,255,.08)] flex items-center justify-center flex-shrink-0">
+          <span class="ms material-symbols-outlined text-[#7a8590] text-[18px]">person</span>
+        </div>
+        <div>
+          <div class="tv font-bold text-xs text-[#e0e4e8] uppercase">Shift Alpha</div>
+          <div class="tv text-[10px] text-[#4a5260]" id="sidebar-role">Not Authenticated</div>
+          <div class="tv text-[10px] text-[#20c060]" id="sidebar-unit-state">Unit 4: Nominal</div>
+        </div>
+      </div>
     </div>
 
-    <script src="script.js"></script>
+    <nav class="flex-1 py-2 overflow-y-auto">
+      <div class="px-4 py-2 tv text-[9px] text-[#4a5260] uppercase tracking-[.2em]">Plant Systems</div>
+      <button class="nav-s active w-full flex items-center gap-3 px-4 py-2.5 tv text-[11px] text-left border-r-4" data-panel="panel-primary">
+        <span class="ms material-symbols-outlined text-[15px]">vibration</span> Primary Circuit
+      </button>
+      <button class="nav-s w-full flex items-center gap-3 px-4 py-2.5 tv text-[11px] text-[#4a5260] hover:text-[#7a8590] hover:bg-[#22262b] text-left border-r-4 border-transparent" data-panel="panel-secondary">
+        <span class="ms material-symbols-outlined text-[15px]">cyclone</span> Secondary Circuit
+      </button>
+      <button class="nav-s w-full flex items-center gap-3 px-4 py-2.5 tv text-[11px] text-[#4a5260] hover:text-[#7a8590] hover:bg-[#22262b] text-left border-r-4 border-transparent" data-panel="panel-safety">
+        <span class="ms material-symbols-outlined text-[15px]">verified_user</span> Safety Systems
+      </button>
+      <div class="px-4 py-2 tv text-[9px] text-[#4a5260] uppercase tracking-[.2em] mt-1">Intelligence</div>
+      <button class="nav-s w-full flex items-center gap-3 px-4 py-2.5 tv text-[11px] text-[#4a5260] hover:text-[#7a8590] hover:bg-[#22262b] text-left border-r-4 border-transparent" data-panel="panel-ai">
+        <span class="ms material-symbols-outlined text-[15px]">psychology</span> AI Copilot
+      </button>
+      <button class="nav-s w-full flex items-center gap-3 px-4 py-2.5 tv text-[11px] text-[#4a5260] hover:text-[#7a8590] hover:bg-[#22262b] text-left border-r-4 border-transparent" data-panel="panel-diagnostics">
+        <span class="ms material-symbols-outlined text-[15px]">analytics</span> Diagnostics
+      </button>
+    </nav>
+
+    <div class="border-t border-[rgba(255,255,255,.08)] py-2">
+      <button id="btn-help" class="w-full flex items-center gap-3 px-4 py-2.5 tv text-[11px] text-[#4a5260] hover:text-[#7a8590] hover:bg-[#22262b] text-left">
+        <span class="ms material-symbols-outlined text-[15px]">help</span> Help &amp; SOP
+      </button>
+      <button id="btn-logs" class="w-full flex items-center gap-3 px-4 py-2.5 tv text-[11px] text-[#4a5260] hover:text-[#7a8590] hover:bg-[#22262b] text-left">
+        <span class="ms material-symbols-outlined text-[15px]">history</span> Audit Trail
+      </button>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="flex-1 overflow-hidden flex flex-col bg-[#0f1114]">
+
+    <!-- ───────── PANEL: PRIMARY CIRCUIT ───────── -->
+    <div id="panel-primary" class="panel active">
+      <div class="flex" style="height:58%">
+        <!-- 3D Digital Twin -->
+        <div class="flex-1 border-r border-[rgba(255,255,255,.08)] bg-[#0f1114] flex flex-col">
+          <div class="flex-shrink-0 flex items-center justify-between px-4 py-2 border-b border-[rgba(255,255,255,.08)] bg-[#1a1d21]">
+            <div class="flex items-center gap-3">
+              <span class="tv font-bold text-[11px] tracking-widest uppercase">Primary Circuit Digital Twin [RT-SIM-04]</span>
+              <span class="tv text-[9px] px-2 py-0.5 bg-[#22262b] border border-[rgba(255,255,255,.08)] text-[#7a8590]">LOD: ULTRA</span>
+              <span id="dao-label" class="tv text-[9px] px-2 py-0.5 bg-[#22262b] border border-[rgba(255,255,255,.08)] text-[#7a8590]">DAO: SIMULATED</span>
+            </div>
+            <div class="flex gap-1">
+              <button id="btn-persp" class="tv text-[9px] px-2 py-1 bg-[#e0e4e8] text-[#0f1114] font-bold border border-[rgba(255,255,255,.1)]">PERSP</button>
+              <button id="btn-ortho" class="tv text-[9px] px-2 py-1 bg-[#22262b] text-[#7a8590] border border-[rgba(255,255,255,.1)] hover:bg-[#2a2f36]">ORTHO</button>
+              <button id="btn-run-sim" class="tv text-[9px] px-2 py-1 bg-[#22262b] text-[#7a8590] border border-[rgba(255,255,255,.1)] hover:bg-[#2a2f36]">SIM RUN</button>
+            </div>
+          </div>
+
+          <div class="flex-1 relative">
+            <div id="three-container" class="absolute inset-0"></div>
+            <!-- Emergency overlay for Three.js -->
+            <div id="three-emergency-overlay" class="absolute inset-0 pointer-events-none opacity-0" style="background:radial-gradient(ellipse at center,rgba(255,32,32,.12) 0%,transparent 70%)"></div>
+
+            <!-- HUD Overlays -->
+            <div class="absolute top-3 left-3 p-2.5 bg-[#1a1d21]/85 border border-[rgba(255,255,255,.1)] backdrop-blur-sm">
+              <div class="tv text-[9px] text-[#4a5260] uppercase mb-1">Coolant Inlet</div>
+              <div class="tv text-xl font-bold"><span id="hud-inlet">542.4</span><span class="text-[11px] text-[#4a5260] ml-1">K</span></div>
+            </div>
+            <div class="absolute top-3 right-3 p-2.5 bg-[#1a1d21]/85 border border-[rgba(255,255,255,.1)] backdrop-blur-sm">
+              <div class="tv text-[9px] text-[#4a5260] uppercase mb-1">Neutron Flux</div>
+              <div class="tv text-sm font-bold"><span id="hud-flux">3.42e14</span> n·cm⁻²·s⁻¹</div>
+            </div>
+            <div class="absolute bottom-3 right-3 flex flex-col gap-1.5">
+              <div class="flex items-center gap-2 px-2.5 py-1.5 bg-[#1a1d21]/85 border border-[rgba(255,255,255,.1)] backdrop-blur-sm">
+                <span class="ms material-symbols-outlined text-[#7a8590] text-[14px]">speed</span>
+                <div class="tv text-[11px]">PUMP-A: <span id="hud-pump-a">3,200</span> RPM</div>
+              </div>
+              <div class="flex items-center gap-2 px-2.5 py-1.5 bg-[#1a1d21]/85 border border-[rgba(255,255,255,.1)] backdrop-blur-sm">
+                <span class="ms material-symbols-outlined text-[#7a8590] text-[14px]">thermostat</span>
+                <div class="tv text-[11px]">T-CORE: <span id="hud-core">1,045.2</span> °C</div>
+              </div>
+              <div class="flex items-center gap-2 px-2.5 py-1.5 bg-[#1a1d21]/85 border border-[rgba(255,255,255,.1)] backdrop-blur-sm">
+                <span class="ms material-symbols-outlined text-[#7a8590] text-[14px]">compress</span>
+                <div class="tv text-[11px]">ΔP: <span id="hud-press">214.8</span> PSI</div>
+              </div>
+            </div>
+            <!-- Thermal margin bar -->
+            <div class="absolute bottom-3 left-3 p-2.5 bg-[#1a1d21]/85 border border-[rgba(255,255,255,.1)] backdrop-blur-sm" style="width:160px">
+              <div class="tv text-[9px] text-[#4a5260] uppercase mb-1.5">Core Margin to Trip</div>
+              <div class="w-full h-2 bg-[#0f1114]">
+                <div id="margin-bar" class="h-full transition-all duration-700 bg-[#20c060]" style="width:87%"></div>
+              </div>
+              <div class="tv text-[10px] font-bold mt-1 text-[#e0e4e8]"><span id="margin-pct">13%</span> to limit</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- AI Copilot sidebar -->
+        <div class="w-72 flex-shrink-0 bg-[#1a1d21] flex flex-col">
+          <div class="flex-shrink-0 flex items-center justify-between px-4 py-2 bg-[#22262b] border-b border-[rgba(255,255,255,.08)]">
+            <div class="flex items-center gap-2">
+              <span class="ms material-symbols-outlined text-[#7a8590] text-[15px]" style="font-variation-settings:'FILL' 1">psychology</span>
+              <span class="tv text-[10px] font-bold tracking-widest uppercase">Agentic AI Copilot</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <div class="w-1.5 h-1.5 rounded-full bg-[#20c060] animate-pulse"></div>
+              <span class="tv text-[9px] text-[#4a5260]">ACTIVE</span>
+            </div>
+          </div>
+          <div id="copilot-steps" class="flex-1 overflow-y-auto p-3 space-y-2"></div>
+          <div class="flex-shrink-0 p-3 border-t border-[rgba(255,255,255,.08)]">
+            <button id="btn-ai-analyze" class="w-full flex items-center justify-center gap-2 py-2 bg-[#22262b] hover:bg-[#2a2f36] border border-[rgba(255,255,255,.08)] transition-colors tv text-[10px] font-bold uppercase tracking-widest">
+              <span class="ms material-symbols-outlined text-[14px]">auto_awesome</span> Request Analysis
+            </button>
+          </div>
+          <div class="flex-shrink-0 p-3 border-t border-[rgba(255,255,255,.08)] bg-[#0f1114]/40">
+            <div class="flex items-center gap-2 mb-1.5">
+              <span class="ms material-symbols-outlined text-[#ff2020] text-[14px] blink">warning</span>
+              <span class="tv text-[9px] font-bold text-[#ff2020] uppercase tracking-widest">Exception Alert</span>
+            </div>
+            <div class="bg-[#0f1114] p-2.5 border border-[#ff2020]/20">
+              <div class="tv text-[10px] font-bold text-[#e0e4e8]" id="exception-label">Sub-Valve 04-B Deviation</div>
+              <div class="tv text-xl font-bold text-[#ff2020]" id="copilot-delta">+14.2 PSI</div>
+              <div class="tv text-[9px] text-[#4a5260] mt-1" id="exception-note">Manual verification required</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Predictive Charts -->
+      <div class="flex-1 border-t border-[rgba(255,255,255,.08)] bg-[#1a1d21] p-4 overflow-hidden flex flex-col">
+        <div class="flex justify-between items-center mb-3 flex-shrink-0">
+          <span class="tv text-[10px] text-[#4a5260] uppercase tracking-widest font-bold">Predictive Telemetry &amp; Safety Boundaries</span>
+          <div class="flex gap-5 tv text-[9px] text-[#4a5260] uppercase">
+            <span class="flex items-center gap-1.5"><div class="w-4 h-px bg-[#e0e4e8]"></div>Real-time</span>
+            <span class="flex items-center gap-1.5"><div class="w-4 h-px border-t border-dashed border-[#7a8590]"></div>AI Predicted</span>
+            <span class="flex items-center gap-1.5"><div class="w-4 h-px bg-[#ff2020] opacity-60"></div>Trip Setpoint</span>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-4 flex-1 min-h-0">
+          <div class="bg-[#0f1114] border border-[rgba(255,255,255,.06)] p-3 relative flex flex-col">
+            <div class="flex justify-between items-start mb-2 flex-shrink-0">
+              <div>
+                <div class="tv text-[9px] text-[#4a5260] uppercase tracking-wider font-bold">Core Thermal Load</div>
+                <div class="tv text-2xl font-bold"><span id="chart1-val">1,045.2</span><span class="text-sm font-normal text-[#4a5260] ml-1">°C</span></div>
+              </div>
+              <div class="text-right">
+                <div class="tv text-[9px] text-[#ff2020] uppercase">Trip Limit</div>
+                <div class="tv text-xs text-[#ff2020]">1,200.0 °C</div>
+              </div>
+            </div>
+            <div class="flex-1 min-h-0 relative">
+              <svg id="svg-temp" viewBox="0 0 300 100" preserveAspectRatio="none" class="absolute inset-0 w-full h-full">
+                <line x1="0" y1="12" x2="300" y2="12" class="chart-trip"/>
+                <path id="ct-pred" d="" class="chart-pred"/>
+                <path id="ct-rt" d="" class="chart-rt"/>
+                <line x1="150" y1="0" x2="150" y2="100" stroke="#7a8590" stroke-width=".4" stroke-dasharray="2,4" opacity=".4"/>
+              </svg>
+            </div>
+            <div class="flex justify-between mt-1 tv text-[8px] text-[#4a5260] uppercase flex-shrink-0">
+              <span>T-10m</span><span>T-5m</span><span class="text-[#e0e4e8] font-bold">NOW</span><span>T+5m</span><span>T+10m</span>
+            </div>
+          </div>
+          <div class="bg-[#0f1114] border border-[rgba(255,255,255,.06)] p-3 relative flex flex-col">
+            <div class="flex justify-between items-start mb-2 flex-shrink-0">
+              <div>
+                <div class="tv text-[9px] text-[#4a5260] uppercase tracking-wider font-bold">Pressure Diff (ΔP)</div>
+                <div class="tv text-2xl font-bold"><span id="chart2-val">214.8</span><span class="text-sm font-normal text-[#4a5260] ml-1">PSI</span></div>
+              </div>
+              <div class="text-right">
+                <div class="tv text-[9px] text-[#ff2020] uppercase">Trip Limit</div>
+                <div class="tv text-xs text-[#ff2020]">250.0 PSI</div>
+              </div>
+            </div>
+            <div class="flex-1 min-h-0 relative">
+              <svg id="svg-press" viewBox="0 0 300 100" preserveAspectRatio="none" class="absolute inset-0 w-full h-full">
+                <line x1="0" y1="12" x2="300" y2="12" class="chart-trip"/>
+                <path id="cp-pred" d="" class="chart-pred"/>
+                <path id="cp-rt" d="" class="chart-rt"/>
+                <line x1="150" y1="0" x2="150" y2="100" stroke="#7a8590" stroke-width=".4" stroke-dasharray="2,4" opacity=".4"/>
+              </svg>
+            </div>
+            <div class="flex justify-between mt-1 tv text-[8px] text-[#4a5260] uppercase flex-shrink-0">
+              <span>T-10m</span><span>T-5m</span><span class="text-[#e0e4e8] font-bold">NOW</span><span>T+5m</span><span>T+10m</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div><!-- /panel-primary -->
+
+    <!-- ───────── PANEL: SECONDARY CIRCUIT ───────── -->
+    <div id="panel-secondary" class="panel">
+      <div class="flex-shrink-0 px-5 py-3 border-b border-[rgba(255,255,255,.08)] bg-[#1a1d21] flex items-center justify-between">
+        <div>
+          <h2 class="tv font-bold text-[11px] tracking-widest uppercase">Secondary Circuit — Steam Generator Loop</h2>
+          <p class="tv text-[10px] text-[#4a5260] mt-0.5">IHX · Steam Generator · Turbine · Condenser · Feed Pump</p>
+        </div>
+        <div id="sec-status" class="tv text-[9px] px-2 py-1 border border-[#20c060]/30 bg-[#20c060]/5 text-[#20c060] font-bold uppercase tracking-wider">LOOP STATUS: NOMINAL</div>
+      </div>
+      <div class="flex flex-1 overflow-hidden">
+        <div class="flex-1 p-5 border-r border-[rgba(255,255,255,.08)] overflow-hidden flex flex-col">
+          <div class="tv text-[9px] text-[#4a5260] uppercase tracking-widest mb-3">P&amp;ID Schematic — Secondary Loop</div>
+          <div class="flex-1 bg-[#0f1114] border border-[rgba(255,255,255,.06)] relative">
+            <svg class="w-full h-full" viewBox="0 0 660 390" preserveAspectRatio="xMidYMid meet">
+              <rect x="40" y="115" width="95" height="145" class="pid-box"/>
+              <text x="87" y="182" text-anchor="middle" font-family="Courier New" font-size="11" fill="#7a8590">IHX</text>
+              <text x="87" y="197" text-anchor="middle" font-family="Courier New" font-size="10" fill="#4a5260">03-A</text>
+              <rect x="245" y="90" width="95" height="185" class="pid-box"/>
+              <text x="292" y="178" text-anchor="middle" font-family="Courier New" font-size="11" fill="#7a8590">STEAM</text>
+              <text x="292" y="193" text-anchor="middle" font-family="Courier New" font-size="10" fill="#4a5260">GEN</text>
+              <polygon points="450,125 540,160 540,225 450,260" class="pid-box"/>
+              <text x="493" y="197" text-anchor="middle" font-family="Courier New" font-size="10" fill="#7a8590">TURB</text>
+              <rect x="450" y="315" width="90" height="55" class="pid-box"/>
+              <text x="495" y="348" text-anchor="middle" font-family="Courier New" font-size="10" fill="#7a8590">COND</text>
+              <circle cx="185" cy="295" r="23" class="pid-box"/>
+              <text x="185" y="299" text-anchor="middle" font-family="Courier New" font-size="9" fill="#7a8590">P-B</text>
+              <line x1="135" y1="145" x2="245" y2="145" class="pid-hot"/>
+              <text x="190" y="136" text-anchor="middle" font-family="Courier New" font-size="9" fill="#ff8020">HOT →</text>
+              <line x1="135" y1="225" x2="245" y2="225" class="pid-pipe"/>
+              <text x="190" y="245" text-anchor="middle" font-family="Courier New" font-size="9" fill="#7a8590">← COLD</text>
+              <line x1="340" y1="155" x2="450" y2="168" stroke="#ff8020" stroke-width="2.5" fill="none" opacity=".8" stroke-dasharray="9,5"/>
+              <text x="395" y="148" text-anchor="middle" font-family="Courier New" font-size="9" fill="#ff8020">STEAM →</text>
+              <line x1="495" y1="225" x2="495" y2="315" class="pid-pipe"/>
+              <line x1="450" y1="342" x2="208" y2="342" class="pid-pipe"/>
+              <line x1="185" y1="342" x2="185" y2="318" class="pid-pipe"/>
+              <line x1="185" y1="272" x2="185" y2="225" class="pid-pipe"/>
+              <line x1="185" y1="225" x2="245" y2="225" class="pid-pipe"/>
+              <circle cx="190" cy="145" r="5" fill="#ff8020" opacity=".9"/>
+              <circle cx="190" cy="225" r="5" fill="#7a8590" opacity=".9"/>
+              <circle cx="348" cy="155" r="5" fill="#ff2020" opacity=".9"/>
+              <text x="42" y="113" font-family="Courier New" font-size="9" fill="#ff8020">480°C →</text>
+              <text x="42" y="271" font-family="Courier New" font-size="9" fill="#7a8590">← 380°C</text>
+              <text x="247" y="88" font-family="Courier New" font-size="9" fill="#ff8020">STEAM 165 bar</text>
+            </svg>
+          </div>
+        </div>
+        <div class="p-4 overflow-y-auto flex-shrink-0" style="width:270px">
+          <div class="tv text-[9px] text-[#4a5260] uppercase tracking-widest mb-3">Loop Parameters</div>
+          <div id="sec-stats"></div>
+        </div>
+      </div>
+    </div><!-- /panel-secondary -->
+
+    <!-- ───────── PANEL: SAFETY SYSTEMS ───────── -->
+    <div id="panel-safety" class="panel relative">
+      <div id="safety-lock" class="absolute inset-0 z-10 bg-[#0f1114]/90 backdrop-blur-sm items-center justify-center" style="display:none">
+        <div class="text-center border border-[#ff2020]/20 p-8 max-w-xs">
+          <span class="ms material-symbols-outlined text-[#ff2020] text-4xl block mb-4">lock</span>
+          <div class="tv font-bold text-sm uppercase tracking-widest">Access Restricted</div>
+          <p class="tv text-[11px] text-[#4a5260] mt-2">Safety controls require Diagnostic Operator (OD) or System Admin (AS).</p>
+        </div>
+      </div>
+      <div class="flex-shrink-0 px-5 py-2 border-b border-[#ff2020]/20 bg-[#ff2020]/5 flex items-center justify-between">
+        <div>
+          <h2 class="tv font-bold text-[11px] tracking-widest uppercase text-[#ff2020]">Safety Systems — Restricted Access</h2>
+          <p class="tv text-[10px] text-[#4a5260] mt-0.5">Emergency shutdown · interlocks · protection systems</p>
+        </div>
+        <div id="safety-badge" class="tv text-[9px] px-2 py-1 border font-bold uppercase tracking-wider">MONITORING ONLY</div>
+      </div>
+      <div class="flex flex-1 overflow-hidden">
+        <div class="w-60 flex-shrink-0 border-r border-[rgba(255,255,255,.08)] p-5 flex flex-col items-center gap-4">
+          <div class="tv text-[9px] text-[#4a5260] uppercase tracking-widest w-full">Emergency Shutdown</div>
+          <div class="w-full p-3 bg-[#0f1114] border border-[rgba(255,255,255,.08)] text-center">
+            <div class="tv text-[9px] text-[#4a5260] uppercase">SCRAM Status</div>
+            <div class="tv text-lg font-bold mt-1" id="scram-status" style="color:#20c060">ARMED / READY</div>
+          </div>
+          <button id="btn-scram" class="scram-btn w-36 h-36 rounded-full border-4 border-[#ff2020] bg-[#ff2020]/80 hover:bg-[#ff2020] text-white font-black uppercase flex flex-col items-center justify-center transition-all">
+            <span class="ms material-symbols-outlined text-3xl mb-1">power_settings_new</span>
+            <span class="tv text-sm">SCRAM</span>
+          </button>
+          <div class="tv text-[9px] text-[#4a5260] text-center max-w-[150px] leading-relaxed">Double-click to confirm. Irreversible — fully logged to audit trail.</div>
+          <div class="mt-auto w-full space-y-2">
+            <button id="btn-depressurize" class="w-full py-2 border border-[#ffd020]/40 text-[#ffd020] tv text-[10px] font-bold uppercase tracking-wider hover:bg-[#ffd020]/10 transition-colors">Emergency Depressurize</button>
+            <button id="btn-reset-locks" class="w-full py-2 border border-[rgba(255,255,255,.1)] text-[#7a8590] tv text-[10px] font-bold uppercase tracking-wider hover:bg-[#22262b] transition-colors">Reset Interlocks</button>
+          </div>
+        </div>
+        <div class="flex-1 border-r border-[rgba(255,255,255,.08)] p-5 overflow-y-auto">
+          <div class="tv text-[9px] text-[#4a5260] uppercase tracking-widest mb-4">Control Rod Positions</div>
+          <div id="rod-table" class="space-y-2"></div>
+        </div>
+        <div class="flex-1 p-5 overflow-y-auto">
+          <div class="tv text-[9px] text-[#4a5260] uppercase tracking-widest mb-4">Protection Interlocks</div>
+          <div id="interlock-table"></div>
+        </div>
+      </div>
+    </div><!-- /panel-safety -->
+
+    <!-- ───────── PANEL: AI COPILOT ───────── -->
+    <div id="panel-ai" class="panel">
+      <div class="flex-shrink-0 px-5 py-3 border-b border-[rgba(255,255,255,.08)] bg-[#1a1d21] flex items-center justify-between">
+        <div>
+          <h2 class="tv font-bold text-[11px] tracking-widest uppercase">AI Copilot — Agentic Intelligence Interface</h2>
+          <p class="tv text-[10px] text-[#4a5260] mt-0.5">Politecnico LFR Physics Model v3.1 · DAO-abstracted predictive analysis</p>
+        </div>
+        <div class="flex items-center gap-2 px-2 py-1 border border-[#20c060]/30 bg-[#20c060]/5">
+          <div class="w-1.5 h-1.5 rounded-full bg-[#20c060] animate-pulse"></div>
+          <span class="tv text-[9px] text-[#20c060] font-bold uppercase">Model Active · 12ms</span>
+        </div>
+      </div>
+      <div class="flex flex-1 overflow-hidden">
+        <div class="flex-1 flex flex-col border-r border-[rgba(255,255,255,.08)]">
+          <div id="ai-feed" class="flex-1 overflow-y-auto p-5 space-y-4">
+            <div class="flex gap-3 fade-in">
+              <div class="w-7 h-7 bg-[#22262b] flex items-center justify-center flex-shrink-0">
+                <span class="ms material-symbols-outlined text-[#7a8590] text-[13px]" style="font-variation-settings:'FILL' 1">psychology</span>
+              </div>
+              <div class="flex-1 bg-[#1a1d21] p-3 border-l-2 border-[#5a6573]">
+                <div class="tv text-[9px] text-[#4a5260] mb-1">AI COPILOT — INIT — <span id="ai-init-ts">--:--:-- UTC</span></div>
+                <p class="tv text-xs text-[#e0e4e8]">Initiating protocol SCCP-74A. Thermal state nominal. Neutron flux deviation +0.4% — within ±2% tolerance. Standing by for operator queries.</p>
+              </div>
+            </div>
+          </div>
+          <div class="flex-shrink-0 border-t border-[rgba(255,255,255,.08)] p-4 flex gap-2">
+            <input id="ai-query-input" type="text" placeholder="Query AI Copilot — e.g. 'Analyze pump-b pressure trend'..."
+              class="flex-1 bg-[#0f1114] border border-[rgba(255,255,255,.1)] px-3 py-2 tv text-xs text-[#e0e4e8] focus:outline-none focus:border-[#5a6573] placeholder-[#3a4050]"/>
+            <button id="btn-ai-query" class="px-4 py-2 bg-[#22262b] hover:bg-[#2a2f36] border border-[rgba(255,255,255,.1)] transition-colors tv text-[10px] font-bold uppercase tracking-widest">QUERY</button>
+          </div>
+          <div class="flex-shrink-0 px-4 pb-2 tv text-[9px] text-[#4a5260]">
+            Role: <span id="ai-role" class="font-bold text-[#7a8590]">---</span> · Model: Politecnico LFR-Physics v3.1 · DAO: <span id="ai-dao-mode">SIMULATED</span>
+          </div>
+        </div>
+        <div class="w-72 p-4 overflow-y-auto space-y-4 flex-shrink-0">
+          <div class="tv text-[9px] text-[#4a5260] uppercase tracking-widest">Active Anomalies</div>
+          <div id="anomaly-list" class="space-y-2"></div>
+          <div class="tv text-[9px] text-[#4a5260] uppercase tracking-widest pt-3 border-t border-[rgba(255,255,255,.08)]">Predictions (T+30min)</div>
+          <div id="ai-predictions" class="space-y-2"></div>
+          <button id="btn-auto-pilot" class="w-full py-2 border border-[rgba(255,255,255,.1)] tv text-[10px] font-bold uppercase tracking-widest hover:bg-[#22262b] transition-colors text-[#7a8590] mt-3">Enable Auto-Pilot Mode</button>
+        </div>
+      </div>
+    </div><!-- /panel-ai -->
+
+    <!-- ───────── PANEL: DIAGNOSTICS ───────── -->
+    <div id="panel-diagnostics" class="panel">
+      <div class="flex-shrink-0 px-5 py-3 border-b border-[rgba(255,255,255,.08)] bg-[#1a1d21] flex items-center justify-between">
+        <div>
+          <h2 class="tv font-bold text-[11px] tracking-widest uppercase">System Diagnostics — Parameter Table</h2>
+          <p class="tv text-[10px] text-[#4a5260] mt-0.5">Live sensor readings · DAO: <span id="diag-dao" class="font-bold text-[#7a8590]">SIMULATED</span></p>
+        </div>
+        <div class="flex gap-2 items-center">
+          <input id="diag-search" type="text" placeholder="Filter sensors..."
+            class="px-3 py-1.5 bg-[#0f1114] border border-[rgba(255,255,255,.1)] tv text-xs text-[#e0e4e8] focus:outline-none focus:border-[#5a6573] w-44 placeholder-[#3a4050]"/>
+          <button id="btn-diag-refresh" class="px-3 py-1.5 border border-[rgba(255,255,255,.1)] hover:bg-[#22262b] transition-colors tv text-[10px] font-bold uppercase tracking-wider text-[#7a8590]">
+            <span class="ms material-symbols-outlined text-[12px] align-middle">refresh</span> Refresh
+          </button>
+          <button id="btn-diag-export" class="px-3 py-1.5 bg-[#22262b] hover:bg-[#2a2f36] border border-[rgba(255,255,255,.1)] transition-colors tv text-[10px] font-bold uppercase tracking-wider">
+            <span class="ms material-symbols-outlined text-[12px] align-middle">download</span> Export CSV
+          </button>
+        </div>
+      </div>
+      <div class="flex-1 overflow-auto">
+        <table class="w-full">
+          <thead class="sticky top-0 bg-[#22262b] z-10">
+            <tr class="tv text-[9px] font-bold uppercase tracking-widest text-[#4a5260]">
+              <th class="text-left px-5 py-2">Tag ID</th>
+              <th class="text-left px-3 py-2">Description</th>
+              <th class="text-left px-3 py-2">System</th>
+              <th class="text-right px-3 py-2">Value</th>
+              <th class="text-right px-3 py-2">Unit</th>
+              <th class="text-right px-3 py-2">Trip</th>
+              <th class="text-center px-3 py-2">Status</th>
+              <th class="text-right px-5 py-2">Updated</th>
+            </tr>
+          </thead>
+          <tbody id="sensor-tbody" class="tv text-xs divide-y divide-[rgba(255,255,255,.04)]"></tbody>
+        </table>
+      </div>
+      <div class="flex-shrink-0 px-5 py-2 border-t border-[rgba(255,255,255,.08)] flex items-center justify-between tv text-[9px] text-[#4a5260]">
+        <span id="diag-count">0 sensors</span>
+        <span>Scan Rate: 500ms · Latency: <span style="color:#20c060">8ms</span></span>
+      </div>
+    </div><!-- /panel-diagnostics -->
+
+  </main>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     FOOTER
+     ══════════════════════════════════════════════════════════ -->
+<footer class="flex-shrink-0 h-8 bg-[#1a1d21] border-t border-[rgba(255,255,255,.08)] flex items-center justify-between px-5 z-50">
+  <div class="flex items-center gap-4 tv text-[9px] text-[#4a5260] uppercase tracking-widest">
+    <span>© 2026 InRebus DAO | CORE-SENTINEL LFR-4G</span>
+    <div class="w-px h-3 bg-[rgba(255,255,255,.08)]"></div>
+    <button id="footer-protocol" class="hover:text-[#7a8590] transition-colors">Protocol v4.2</button>
+    <button id="footer-logs" class="hover:text-[#7a8590] transition-colors">Terminal Logs</button>
+    <button id="footer-telemetry" class="hover:text-[#7a8590] transition-colors">Telemetry Node 08</button>
+  </div>
+  <div class="flex items-center gap-5 tv text-[9px] text-[#4a5260] uppercase tracking-widest">
+    <span class="flex items-center gap-1.5"><div class="w-1.5 h-1.5 rounded-full bg-[#20c060] animate-pulse"></div>COMMS: NOMINAL</span>
+    <span>AES-512</span>
+    <span id="utc-clock" class="text-[#7a8590] font-bold">00:00:00:000 UTC</span>
+  </div>
+</footer>
+
+<!-- ══════════════════════════════════════════════════════════
+     AUDIT SLIDE PANEL
+     ══════════════════════════════════════════════════════════ -->
+<div id="audit-panel" class="fixed right-0 top-0 bottom-0 w-[400px] bg-[#1a1d21] border-l border-[rgba(255,255,255,.08)] z-[150] flex flex-col transform translate-x-full shadow-2xl">
+  <div class="flex-shrink-0 flex items-center justify-between px-5 py-3 border-b border-[rgba(255,255,255,.08)] bg-[#22262b]">
+    <div class="flex items-center gap-2 tv font-bold text-xs uppercase tracking-widest">
+      <span class="ms material-symbols-outlined text-[#7a8590] text-[15px]">history</span> Audit Event Trail
+    </div>
+    <div class="flex gap-3">
+      <button id="btn-clear-audit" class="tv text-[9px] text-[#4a5260] hover:text-[#ff2020] uppercase tracking-wider transition-colors">Clear</button>
+      <button id="btn-close-audit" class="text-[#4a5260] hover:text-[#e0e4e8] transition-colors"><span class="ms material-symbols-outlined text-[18px]">close</span></button>
+    </div>
+  </div>
+  <div id="audit-list" class="flex-1 overflow-y-auto p-4 space-y-0.5 log text-[10px]"></div>
+  <div class="flex-shrink-0 p-3 border-t border-[rgba(255,255,255,.08)]">
+    <button id="btn-export-audit" class="w-full py-2 border border-[rgba(255,255,255,.1)] hover:bg-[#22262b] tv text-[10px] font-bold uppercase tracking-widest transition-colors text-[#7a8590]">
+      <span class="ms material-symbols-outlined text-[11px] align-middle">download</span> Export Audit CSV
+    </button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     MODAL
+     ══════════════════════════════════════════════════════════ -->
+<div id="modal-overlay" class="fixed inset-0 bg-black/75 z-[100] hidden items-center justify-center backdrop-blur-sm">
+  <div class="bg-[#1a1d21] border border-[rgba(255,255,255,.12)] p-5 min-w-[520px] max-w-2xl shadow-2xl flex flex-col">
+    <div class="flex justify-between items-center border-b border-[rgba(255,255,255,.08)] pb-4 mb-4">
+      <div class="flex items-center gap-3">
+        <span id="modal-icon" class="ms material-symbols-outlined text-[#7a8590] text-xl">info</span>
+        <h3 id="modal-title" class="tv font-bold text-sm tracking-widest uppercase">Title</h3>
+      </div>
+      <button id="btn-modal-close" class="text-[#4a5260] hover:text-[#ff2020] transition-colors">
+        <span class="ms material-symbols-outlined">close</span>
+      </button>
+    </div>
+    <div id="modal-content" class="tv text-sm text-[#7a8590] min-h-[100px] max-h-[55vh] overflow-y-auto mb-4"></div>
+    <div class="flex justify-end gap-3">
+      <button id="btn-modal-sec" class="hidden px-4 py-2 border border-[rgba(255,255,255,.1)] hover:bg-[#22262b] tv text-xs font-bold uppercase tracking-widest transition-colors text-[#7a8590]">CANCEL</button>
+      <button id="btn-modal-pri" class="px-4 py-2 bg-[#22262b] hover:bg-[#2a2f36] border border-[rgba(255,255,255,.1)] tv text-xs font-bold uppercase tracking-widest transition-colors text-[#e0e4e8]">ACKNOWLEDGE</button>
+    </div>
+  </div>
+</div>
+
+<script src="script.js"></script>
 </body>
 </html>
