@@ -1,0 +1,19 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Tooling artifacts
+.eslintcache
+*.log
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+
+# Scratch/temp scripts (not project code)
+split.py
+split2.js
+convert_to_esm.js
+fix-imports.js
