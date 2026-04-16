@@ -1,129 +1,96 @@
-# HMI Core — MVI Reducer & RBAC System
+# CORE-SENTINEL HMI — Reactor Control & Digital Twin
+> **ISA-101 / NUREG-0700 Compliant High-Performance HMI for InRebus DAO LFR-4G Unit 4**
 
-> **ISA-101 compliant HMI logic layer for the InRebus DAO LFR-4G Unit 4 Lead-Cooled Fast Reactor.**
+![Version](https://img.shields.io/badge/version-4.3.0-blue.svg)
+![License](https://img.shields.io/badge/license-PROPRIETARY-red.svg)
+![Standards](https://img.shields.io/badge/compliance-ISA--101%20|%20NUREG--0700%20|%20IEC--61511-green.svg)
 
-This project implements a High-Performance HMI (Human-Machine Interface) logic layer following **ISA-101** and **NUREG-0700** standards. It utilises a Model-View-Intent (MVI) architecture to ensure predictable, auditable state management in a safety-critical industrial environment.
-
----
-
-## 🚀 Key Features
-
-| Feature | Detail |
-|---|---|
-| **MVI Architecture** | Unidirectional data flow — state is never mutated, only replaced |
-| **ISA-101 Compliance** | Designed for high-performance monitoring and situational awareness |
-| **RBAC Guards** | Strict Role-Based Access Control preventing unauthorised operations (SCRAM, Setpoint changes) based on role (OL, OD, AS) |
-| **First-Out Tracking** | ISA-101 §5.3 — first alarm in a quiet cascade is tagged `firstOut:true` |
-| **Alarm Shelving** | ISA-101 §5.6 — nuisance alarm suppression (OD/AS only) |
-| **Immutable State** | All updates use spread patterns — enables safe undo/replay |
-| **Centralised Constants** | `constants/actionTypes.js` — no magic strings anywhere |
-| **Automated Testing** | Comprehensive Vitest suite validating every safety-critical guard |
+CORE-SENTINEL is a mission-critical High-Performance HMI logic layer designed for the Fourth-Generation Lead-Cooled Fast Reactor (LFR). It utilizes a professional **Model-View-Intent (MVI)** architecture to provide deterministic, auditable, and role-guarded control over reactor telemetry and safety systems.
 
 ---
 
-## 📁 Project Structure
+## 🚀 Key Modules & Features
+
+### 💎 3D Digital Twin Integration
+Real-time synchronization with the reactor core via Three.js. Provides operators with a high-fidelity visual representation of control rod positions, coolant flow patterns, and thermal gradients.
+
+### 🛡️ Safety-Critical RBAC Guards
+Unconditional Enforcement of **ISA-101 §6.5** security guards. Critical operations (SCRAM, Interlock Reset) are hard-bound to specific roles (Operation Director, System Admin) at the state-machine level, preventing unauthorized or accidental triggers.
+
+### 🌪️ Emergency Scenario Engine
+A built-in physics simulation for stress-testing and training. High-fidelity simulation of LOCA (Loss of Coolant), Station Blackout, and Thermal Escalation scenarios with autonomous AI advisory integration.
+
+### 🚨 Smart Alarm Management
+Fully compliant with **ISA-101 §5**:
+*   **First-Out Tracking**: Automatically identifies the root cause in an alarm cascade.
+*   **Intelligent Shelving**: Suppression of nuisance alarms during maintenance or known transients.
+*   **Audit Trail**: 100% logging of every alarm transition and operator acknowledgment.
+
+---
+
+## 📁 Project Architecture
 
 ```
 hmi/
 ├── src/
-│   ├── reducer.js          # Central MVI state machine — the "Brain"
-│   ├── model.js            # Initial state shape (mkModel factory)
-│   ├── dao.js              # Data Access Object — sensor simulation
-│   ├── events.js           # DOM event handlers → dispatch()
-│   ├── views/              # Pure render functions
-│   └── scenario-engine.js  # Emergency scenario simulator
+│   ├── main.js             # Application entry point & service initialization
+│   ├── reducer.js          # Central MVI state machine (The Brain)
+│   ├── model.js            # Immutable state definition
+│   ├── events.js           # Event delegation & binding logic
+│   ├── scenario-engine.js  # Emergency procedure simulation logic
+│   ├── three-twin.js       # 3D Digital Twin (Three.js) synchronization
+│   ├── dao.js              # Data Access Object (Sensor Simulation/API)
+│   └── views/              # Pure high-performance render functions
 ├── constants/
-│   └── actionTypes.js      # Frozen ACTION_TYPES object — no magic strings
+│   └── actionTypes.js      # Type-safe intent constants (No Magic Strings)
 ├── tests/
-│   └── reducer.test.js     # Vitest validation for all RBAC guards
-├── utils.js                # Shared helpers (ts, mkEntry, escHtml…)
-├── vite.config.js          # Build + Vitest configuration
-└── index.html              # Single-page HMI shell
+│   └── reducer.test.js     # Headless Vitest suite (System Validation)
+├── rbac-factory.js         # Role-based component factory & guards
+├── utils.js                # Shared industrial utilities (timestamps, formatting)
+└── index.html              # High-Performance HMI shell
 ```
 
 ---
 
-## 🛠 Usage
+## 🛠 Operation & Deployment
 
-### Install dependencies
+### Development Environment
 ```bash
-npm install
+npm install   # Install industrial dependencies
+npm run dev   # Launch Vite HMR server (http://localhost:3000)
 ```
 
-### Run the test suite (validates all RBAC guards)
+### System Validation (Headless)
+Run the automated test suite to verify all ISA-101 logic gates and RBAC barriers.
 ```bash
-npm run test
+npm test
 ```
 
-### Start the development server
-```bash
-npm run dev
-```
-
-### Build for air-gapped deployment
+### Production Build (Air-Gapped)
+Generates a minified, self-contained bundle in `/dist` for deployment on isolated industrial networks.
 ```bash
 npm run build
 ```
 
 ---
 
-## 🔐 RBAC Permission Matrix
+## 🔐 Permission Access Matrix
 
-| Intent | OL | OD | AS |
-|---|:---:|:---:|:---:|
-| `NAVIGATE` | ✅ | ✅ | ✅ |
-| `ACK_ALL` | ✅ | ✅ | ✅ |
-| `SCRAM` | ❌ | ✅ | ✅ |
-| `RESET_SCRAM` | ❌ | ❌ | ✅ |
-| `TOGGLE_AUTOPILOT` | ❌ | ✅ | ✅ |
-| `RESET_INTERLOCKS` | ❌ | ❌ | ✅ |
-| `SHELF_ALARM` | ❌ | ✅ | ✅ |
-| `UNSHELVE_ALARM` | ❌ | ✅ | ✅ |
+| Feature / Action | OL | OD | AS |
+|:---|:---:|:---:|:---:|
+| **Navigation & Monitoring** | ✅ | ✅ | ✅ |
+| **Alarm Acknowledgment** | ✅ | ✅ | ✅ |
+| **Emergency Scenario Control** | ❌ | ✅ | ✅ |
+| **SCRAM / Shutdown** | ❌ | ✅ | ✅ |
+| **Interlock Manual Reset** | ❌ | ❌ | ✅ |
+| **Cybersecurity Configuration** | ❌ | ❌ | ✅ |
 
-> **OL** = Operator Level · **OD** = Operations Director · **AS** = Authorised Supervisor
+> **OL**: Local Operator · **OD**: Operations Director · **AS**: Authorized Supervisor
 
 ---
 
-## 🧠 How It Works — MVI Architecture
-
-### The Flow
-```
-User Action → Intent (string) → reduce(state, intent, payload) → newState → render(newState)
-```
-
-1. **Intent** — A user clicks "Emergency Stop". The event handler calls `dispatch('SCRAM')`.
-2. **RBAC Guard** — Before any logic runs, the reducer checks the permission matrix. If the role is `OL`, the guard rejects the intent and returns the current state unchanged.
-3. **Reducer (Model)** — If permitted, the reducer creates a *new* state object (spread pattern). The old state is never touched.
-4. **Render (View)** — The pure render function reflects the new state to the DOM via RAF scheduling.
-
-### Why Immutability Matters (ISA-101 §6.5)
-- The "PLC ghost data" problem: if you mutate state directly, the view can show stale readings from the previous tick.
-- Enables a full audit trail — every state transition is logged in `auditLog`.
-- Safe undo/replay for protocol step debugging.
-
-### Why No Magic Strings
-A typo like `dispatch('SCRMA')` would silently fall through to the reducer's `default` case and do nothing — no error, no audit entry. With `ACTION_TYPES`, a typo is a `ReferenceError` at parse time.
+## 🗺️ Path to Real-World Connectivity
+The system is currently configured for high-fidelity simulation. For instructions on connecting to live PLCs or SCADA gateways, refer to the **[RECOVERY_AND_ROADMAP.md](./RECOVERY_AND_ROADMAP.md)**.
 
 ---
-
-## ✅ Test Coverage
-
-The Vitest suite (`tests/reducer.test.js`) covers:
-
-- **RBAC Guards** — SCRAM blocked for OL/no-role; permitted for OD/AS
-- **Interlock Reset** — blocked for OD; permitted only for AS
-- **Session Management** — `SET_ROLE`, `TOUCH_ACTIVITY`
-- **Alarm Lifecycle** — add, ack, clear, shelf, unshelve
-- **First-Out Tracking** — ISA-101 §5.3 cascade logic
-- **Pure Function Invariants** — original state is never mutated; unknown intents return state unchanged
-- **Audit Trail** — every security denial and state change is logged
-
----
-
-## 📜 Changelog
-
-See [CHANGELOG.md](./CHANGELOG.md) for version history.
-
----
-
-*CORE-SENTINEL HMI v4.3 · InRebus DAO · Proprietary*
+*CORE-SENTINEL HMI v4.3.0 · InRebus DAO · Strictly Proprietary & Confidential*
