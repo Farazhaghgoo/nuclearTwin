@@ -81,9 +81,30 @@ const DAO = {
 // ═══════════════════════════════════════════════════════════════════
 // SECTION 2: IMMUTABLE MODEL
 // ═══════════════════════════════════════════════════════════════════
+const INTENT_PERMISSIONS = {
+  // 'NAVIGATE', 'ACK_ALL', 'DISMISS_BANNER', 'TOGGLE_AUDIT', 'CLEAR_AUDIT', 'LOG', 'TOUCH_ACTIVITY', 'SET_DEMO_MODE', 'TOGGLE_HIGH_CONTRAST' are inherently safe for all logged-in roles
+  'SCRAM': ['OD', 'AS'],
+  'RESET_SCRAM': ['AS'],
+  'TOGGLE_AUTOPILOT': ['OD', 'AS'],
+  'RESET_INTERLOCKS': ['AS'],
+  'SHELF_ALARM': ['OD', 'AS'],
+  'UNSHELVE_ALARM': ['OD', 'AS']
+};
+
+// ── XSS escape utility (WCAG / security best practice) ──────────────
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#39;');
+}
+
 const mkModel = () => ({
   role:         null,
   sessionStart: null,
+  lastActivity: null,
   activePanel:  'panel-primary',
 
   alarms: [
@@ -125,19 +146,40 @@ let S = mkModel();
 // SECTION 3: MVI REDUCER
 // ═══════════════════════════════════════════════════════════════════
 function reduce(s, intent, p = {}) {
+  // ── RBAC intent guard (ISA-101 §6.5 / NUREG-0700) ─────────────────
+  if (window.INTENT_PERMISSIONS && INTENT_PERMISSIONS[intent]) {
+    const allowed = INTENT_PERMISSIONS[intent];
+    if (!s.role || !allowed.includes(s.role)) {
+      const denyMsg = `SECURITY: Intent "${intent}" denied — role ${s.role||'NONE'} lacks permission`;
+      console.warn(`[RBAC] ${denyMsg}`);
+      return { ...s, auditLog: [...s.auditLog, mkEntry(denyMsg, s.role)] };
+    }
+  }
+
   const log = msg => [...s.auditLog, mkEntry(msg, s.role)];
 
   switch (intent) {
     case 'SET_ROLE':
-      return { ...s, role:p.role, sessionStart:new Date(), auditLog:log(`Session started. Role: ${p.role}`) };
+      return { ...s, role:p.role, sessionStart:new Date(), lastActivity:Date.now(), auditLog:log(`Session started. Role: ${p.role}`) };
     case 'NAVIGATE':
       return { ...s, activePanel:p.panel, auditLog:log(`Navigated to: ${p.panel}`) };
     case 'ACK_ALL':
       return { ...s, alarms:s.alarms.map(a=>({...a,acked:true})), auditLog:log('All alarms acknowledged') };
     case 'DISMISS_BANNER':
       return { ...s, bannerOn:false };
-    case 'ADD_ALARM':
-      return { ...s, alarms:[...s.alarms, p.alarm], bannerOn:true, auditLog:log(`ALARM [P${p.alarm.p}] ${p.alarm.tag}: ${p.alarm.msg}`) };
+    case 'ADD_ALARM': {
+      // ISA-101: first alarm in a new cascade is marked firstOut
+      const hasActive = s.alarms.some(a => !a.acked && !a.cleared && !a.shelved);
+      const newAlarm = { cleared:false, shelved:false, firstOut:!hasActive, ...p.alarm };
+      return { ...s, alarms:[...s.alarms, newAlarm], bannerOn:true, auditLog:log(`ALARM [P${newAlarm.p}] ${newAlarm.tag}: ${newAlarm.msg}${newAlarm.firstOut?' [FIRST-OUT]':''}`) };
+    }
+    case 'CLEAR_ALARM':
+      return { ...s, alarms:s.alarms.map(a => a.id===p.id ? {...a, cleared:true} : a), auditLog:log(`Alarm cleared: ${p.id}`) };
+    case 'SHELF_ALARM':
+      // ISA-101 §5.6: Shelving temporarily suppresses a nuisance alarm
+      return { ...s, alarms:s.alarms.map(a => a.id===p.id ? {...a, shelved:true} : a), auditLog:log(`Alarm shelved: ${p.id} (OD/AS only)`) };
+    case 'UNSHELVE_ALARM':
+      return { ...s, alarms:s.alarms.map(a => a.id===p.id ? {...a, shelved:false} : a), auditLog:log(`Alarm unshelved: ${p.id}`) };
     case 'CLEAR_ALARMS_BY_PREFIX':
       return { ...s, alarms:s.alarms.filter(a=>!a.id.startsWith(p.prefix)) };
     case 'TICK':
@@ -163,6 +205,16 @@ function reduce(s, intent, p = {}) {
       return { ...s, interlocks:s.interlocks.map(i=>i.st==='OFFLINE'?{...i,st:'ARMED'}:i), auditLog:log('Interlocks reset to ARMED') };
     case 'LOG':
       return { ...s, auditLog:log(p.msg) };
+    case 'TOUCH_ACTIVITY':
+      return { ...s, lastActivity:Date.now() };
+    case 'SESSION_TIMEOUT':
+      return { ...mkModel(), auditLog:[mkEntry('SESSION TIMEOUT: Automatic logout after inactivity', null)] };
+    case 'TOGGLE_HIGH_CONTRAST': {
+      // NUREG-0700 §11.4.2: High-contrast mode for varied lighting conditions
+      const hc = !s.highContrast;
+      document.documentElement.setAttribute('data-theme', hc ? 'high-contrast' : 'default');
+      return { ...s, highContrast: hc, auditLog:log(`High-contrast mode ${hc ? 'ENABLED' : 'DISABLED'}`) };
+    }
     case 'SET_DEMO_MODE':
       return { ...s, demoMode:p.active };
     default:
@@ -480,18 +532,28 @@ function renderPanels(s) {
 
 function renderAlarmBanner(s) {
   const banner = document.getElementById('alarm-banner');
-  const active = s.alarms.filter(a => !a.acked);
+  // ISA-101: Shelved alarms are suppressed from the active banner
+  const active = s.alarms.filter(a => !a.acked && !a.shelved);
   if (s.bannerOn && active.length > 0) {
     banner.style.height = '2.25rem';
+    
+    // Calculate priority counts
+    const counts = { 1:0, 2:0, 3:0 };
+    active.forEach(a => counts[a.p]++);
+    
     const top = active.reduce((a,b) => a.p < b.p ? a : b);
     const col   = top.p===1?'#e31a1a':top.p===2?'#d97d06':'#cd5c08';
     const bg    = top.p===1?'#fcdcdc':top.p===2?'#fcecd5':'#fce3d5';
     document.getElementById('alarm-inner').style.background = bg;
     document.getElementById('alarm-icon').style.color = col;
+    
+    // Add priority count indicator
+    const countText = `[P1:${counts[1]} P2:${counts[2]} P3:${counts[3]}] `;
+    
     document.getElementById('alarm-text').style.color = col;
-    document.getElementById('alarm-text').textContent = active
+    document.getElementById('alarm-text').textContent = countText + active
       .sort((a,b)=>a.p-b.p)
-      .map(a=>`[P${a.p}] ${a.tag}: ${a.msg}`)
+      .map(a=>`[P${a.p}] ${a.tag}: ${a.msg}${a.firstOut?' [FIRST-OUT]':''}`)
       .join(' ·· ');
     const ab = document.getElementById('btn-ack-all');
     ab.style.borderColor=col+'55'; ab.style.color=col;
@@ -535,8 +597,9 @@ function renderHUD(s) {
 }
 
 function renderSystemHealth(s) {
-  const alarmCount = s.alarms.filter(a => !a.acked).length;
-  const p1count    = s.alarms.filter(a => !a.acked && a.p === 1).length;
+  const activeUnshelved = s.alarms.filter(a => !a.acked && !a.shelved);
+  const alarmCount = activeUnshelved.length;
+  const p1count    = activeUnshelved.filter(a => a.p === 1).length;
   const sl = document.getElementById('sys-label');
   const sd = document.getElementById('sys-dot');
   if (!sl || !sd) return;
@@ -838,17 +901,29 @@ function renderAIPredictions(s) {
 function renderAnomalyList(s) {
   const el = document.getElementById('anomaly-list');
   if (!el) return;
-  const active = s.alarms.filter(a => !a.acked).slice(0, 5);
+  const active = s.alarms.filter(a => !a.cleared).slice(0, 10);
   if (!active.length) {
     el.innerHTML = '<div class="tv text-[12px] text-[#6c757d] italic">No active anomalies</div>';
     return;
   }
   el.innerHTML = active.map(a => {
-    const col = a.p===1?'#e31a1a':a.p===2?'#d97d06':'#cd5c08';
-    return `<div class="p-3 border border-l-4 space-y-0.5 mb-2" style="border-color:${col}33;border-left-color:${col};background:${col}09">
-      <div class="tv text-[11px] font-bold uppercase" style="color:${col}">P${a.p} — ${a.tag}</div>
-      <div class="tv text-[12px] text-[#212529]">${a.msg}</div>
-      <div class="tv text-[11px] text-[#6c757d]">${a.ts}</div>
+    const col   = a.p===1 ? '#e31a1a' : a.p===2 ? '#d97d06' : '#cd5c08';
+    const shape = a.p===1 ? '■' : a.p===2 ? '▲' : '●'; // ISA-101 shapes
+
+    return `<div class="p-3 border border-l-4 space-y-1 mb-2 transition-all" style="border-color:${col}33;border-left-color:${col};background:${a.shelved?'#f4f6f8':col+'09'};opacity:${a.shelved?0.6:1}">
+      <div class="flex justify-between items-start">
+        <div class="tv text-[11px] font-bold uppercase tracking-wider" style="color:${col}">${shape} P${a.p}${a.shelved?' [SHELVED]':''} — ${a.tag}</div>
+        <div class="tv text-[11px] text-[#6c757d]">${a.ts}</div>
+      </div>
+      <div class="tv text-[12px] text-[#212529]" style="${a.shelved?'text-decoration:line-through':''}">${a.msg}</div>
+      <div class="flex gap-2 pt-1">
+        ${!a.acked ? `<button class="tv text-[10px] uppercase font-bold text-[#212529] bg-[#d1d6dc] hover:bg-[#c2c7cd] px-2 py-0.5 border border-[#495057] transition-colors" onclick="S=reduce(S,'ACK_ALL');scheduleRender();">ACKNOWLEDGE</button>` : ''}
+        ${(s.role === 'OD' || s.role === 'AS') ? (
+          a.shelved
+          ? `<button class="tv text-[10px] uppercase font-bold text-[#159647] border border-[#159647] px-2 py-0.5 hover:bg-[#159647] hover:text-white transition-colors" onclick="S=reduce(S,'UNSHELVE_ALARM',{id:'${a.id}'});scheduleRender();">UNSHELVE</button>`
+          : `<button class="tv text-[10px] uppercase font-bold text-[#6c757d] border border-[#6c757d] px-2 py-0.5 hover:bg-[#6c757d] hover:text-white transition-colors" onclick="S=reduce(S,'SHELF_ALARM',{id:'${a.id}'});scheduleRender();">SHELVE (SUPPRESS)</button>`
+        ) : ''}
+      </div>
     </div>`;
   }).join('');
 }
@@ -1243,12 +1318,19 @@ function bindAll() {
           <span class="text-[#343a40]">Mute Routine Notifications</span>
           <input type="checkbox" id="s-mute" class="w-4 h-4 accent-[#495057]"/>
         </label>
-        <div class="pt-2">
+        <div class="pt-2 border-t border-[rgba(0,0,0,.06)]">
           <label class="text-[11px] text-[#6c757d] uppercase tracking-wider">DAO Source Mode</label>
           <select id="s-dao" class="w-full mt-1 bg-[#f4f6f8] border border-[rgba(0,0,0,.1)] px-2 py-1.5 tv text-xs text-[#212529] focus:outline-none">
             <option value="SIMULATED">SIMULATED (Politecnico Model)</option>
             <option value="PHYSICAL">PHYSICAL (Live Sensors)</option>
           </select>
+        </div>
+        <div class="pt-2 border-t border-[rgba(0,0,0,.06)]">
+          <div class="text-[11px] text-[#6c757d] uppercase tracking-widest mb-2">Display (NUREG-0700 §11.4.2)</div>
+          <label class="flex items-center justify-between cursor-pointer py-1 border-b border-[rgba(0,0,0,.06)]">
+            <span class="text-[#343a40]">High-Contrast Mode</span>
+            <input type="checkbox" id="s-hc" class="w-4 h-4 accent-[#495057]" ${S.highContrast ? 'checked' : ''}/>
+          </label>
         </div>
       </div>`,
       primary:'SAVE CHANGES', secondary:'CANCEL',
@@ -1258,7 +1340,9 @@ function bindAll() {
         setText('dao-label', `DAO: ${dao}`);
         setText('diag-dao', dao);
         setText('ai-dao-mode', dao);
-        dispatch('LOG',{msg:`Settings saved. DAO mode: ${dao}`});
+        const hcChecked = document.getElementById('s-hc')?.checked ?? false;
+        if (hcChecked !== S.highContrast) dispatch('TOGGLE_HIGH_CONTRAST');
+        dispatch('LOG',{msg:`Settings saved. DAO mode: ${dao}${hcChecked?' | High-contrast: ON':''}`});
       }
     });
   });
@@ -1493,11 +1577,53 @@ function startClock() {
   })();
 }
 
+// ── Session Timeout (NUREG-0700 §6.5 — 15 min inactivity) ───────────
+const SESSION_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes
+const TIMEOUT_WARN_MS    =  1 * 60 * 1000; // warn at 1 min remaining
+let _sessionTimer = null;
+let _sessionWarnShown = false;
+
+function resetSessionTimer() {
+  if (!S.role) return;  // only active when logged in
+  _sessionWarnShown = false;
+  if (_sessionTimer) clearTimeout(_sessionTimer);
+  _sessionTimer = setTimeout(() => {
+    console.warn('[SESSION] Timeout — logging out');
+    ScenarioEngine.stop();
+    S = reduce(S, 'SESSION_TIMEOUT');
+    document.getElementById('role-overlay').style.display = 'flex';
+    if (window.RBACContext) RBACContext.clear();
+    const navCyber = document.getElementById('nav-cyber');
+    if (navCyber) navCyber.style.display = 'none';
+    scheduleRender();
+  }, SESSION_TIMEOUT_MS);
+}
+
 function startDataLoop() {
   setInterval(() => {
     if (!S.role) return;
     DAO.tick(S.scramActive);
     S = reduce(S, 'TICK');
+
+    // Flush RTN log entries from DAO
+    while (DAO._rtnQueue && DAO._rtnQueue.length > 0) {
+      S = reduce(S, 'LOG', { msg: DAO._rtnQueue.shift() });
+    }
+
+    // Session timeout warning (1 min before logout)
+    if (S.lastActivity && !_sessionWarnShown) {
+      const idleMs = Date.now() - S.lastActivity;
+      if (idleMs > SESSION_TIMEOUT_MS - TIMEOUT_WARN_MS) {
+        _sessionWarnShown = true;
+        showModal({
+          icon: 'timer',
+          title: 'Session Timeout Warning',
+          content: '<p class="tv text-sm text-[#d97d06]">Your session will automatically log out in 1 minute due to inactivity. Click STAY LOGGED IN to continue.</p>',
+          primary: 'STAY LOGGED IN',
+          onConfirm: () => { dispatch('TOUCH_ACTIVITY'); resetSessionTimer(); }
+        });
+      }
+    }
 
     // Auto-alarm: core temp high (only outside scenario to avoid duplicates)
     const ct = S.sensors.CORE_TEMP?.v ?? 0;
@@ -1536,9 +1662,17 @@ function dlFile(content,name,type) {
 // BOOTSTRAP
 // ═══════════════════════════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', () => {
+  // ISA-5.1 tag validation at startup (silently checks DAO)
   bindAll();
   startClock();
   startDataLoop();
   initThreeJS();
   scheduleRender();
+
+  // Session activity tracking (NUREG-0700 §6.5)
+  ['mousemove','keydown','click','touchstart'].forEach(evt =>
+    document.addEventListener(evt, () => {
+      if (S.role) { dispatch('TOUCH_ACTIVITY'); resetSessionTimer(); }
+    }, { passive: true })
+  );
 });
