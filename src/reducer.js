@@ -21,6 +21,7 @@ export const INTENT_PERMISSIONS = Object.freeze({
   [A.RESET_INTERLOCKS]:  ['AS'],
   [A.SHELF_ALARM]:       ['OD', 'AS'],
   [A.UNSHELVE_ALARM]:    ['OD', 'AS'],
+  [A.ADVANCE_PROTOCOL]:  ['OD', 'AS'],
 });
 
 // ═══════════════════════════════════════════════════════════════════════════

@@ -67,5 +67,18 @@ export const DAO = {
     Object.entries(this.NOMINAL).forEach(([k, v]) => {
       if (this._s[k]) this._s[k].v = v;
     });
+  },
+
+  inject(key, delta) {
+    if (this._s[key]) {
+      const s = this._s[key];
+      s.v = Math.max(s.low * 0.92, Math.min(s.trip * 0.985, s.v + delta));
+    }
+  },
+
+  override(key, value) {
+    if (this._s[key]) {
+      this._s[key].v = value;
+    }
   }
 };
