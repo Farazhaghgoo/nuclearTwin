@@ -421,12 +421,10 @@ describe('Audit & UI', () => {
     expect(reduce(s2, A.TOGGLE_AUDIT).auditPanelOpen).toBe(false);
   });
 
-  test('TOGGLE_HIGH_CONTRAST: flips highContrast and calls setAttribute', () => {
+  test('TOGGLE_HIGH_CONTRAST: flips highContrast', () => {
     const s    = mk({ role: 'OL', highContrast: false });
     const next = reduce(s, A.TOGGLE_HIGH_CONTRAST);
     expect(next.highContrast).toBe(true);
-    expect(document.documentElement.setAttribute)
-      .toHaveBeenCalledWith('data-theme', 'high-contrast');
     expect(lastLog(next)).toContain('ENABLED');
   });
 
@@ -434,8 +432,6 @@ describe('Audit & UI', () => {
     const s    = mk({ role: 'OL', highContrast: true });
     const next = reduce(s, A.TOGGLE_HIGH_CONTRAST);
     expect(next.highContrast).toBe(false);
-    expect(document.documentElement.setAttribute)
-      .toHaveBeenCalledWith('data-theme', 'default');
     expect(lastLog(next)).toContain('DISABLED');
   });
 

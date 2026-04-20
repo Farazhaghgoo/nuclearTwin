@@ -28,6 +28,7 @@ export const ACTION_TYPES = Object.freeze({
   // ── Safety-Critical (RBAC-guarded) ───────────────────────────────
   SCRAM:                'SCRAM',
   RESET_SCRAM:          'RESET_SCRAM',
+  AUTO_SCRAM:           'AUTO_SCRAM',
   RESET_INTERLOCKS:     'RESET_INTERLOCKS',
   ADVANCE_PROTOCOL:     'ADVANCE_PROTOCOL',
 

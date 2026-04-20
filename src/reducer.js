@@ -126,6 +126,13 @@ export function reduce(s, intent, p = {}) {
         auditLog:    log(`⚠ SCRAM INITIATED by ${s.role || 'SYSTEM'}`),
       };
 
+    case A.AUTO_SCRAM:
+      return {
+        ...s,
+        scramActive: true,
+        auditLog:    log('⚠ AUTO-SCRAM by Reactor Protection System'),
+      };
+
     case A.RESET_SCRAM:
       return {
         ...s,
@@ -177,7 +184,6 @@ export function reduce(s, intent, p = {}) {
     case A.TOGGLE_HIGH_CONTRAST: {
       // NUREG-0700 §11.4.2: High-contrast mode for varied lighting conditions.
       const hc = !s.highContrast;
-      document.documentElement.setAttribute('data-theme', hc ? 'high-contrast' : 'default');
       return { ...s, highContrast: hc, auditLog: log(`High-contrast mode ${hc ? 'ENABLED' : 'DISABLED'}`) };
     }
 

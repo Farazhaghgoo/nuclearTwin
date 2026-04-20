@@ -5,6 +5,7 @@ import { dispatch, scheduleRender } from '../reducer.js';
 
 // ═══════════════════════════════════════════════════════════════════
 export function render(s) {
+  document.documentElement.setAttribute('data-theme', s.highContrast ? 'high-contrast' : 'default');
   renderRole(s);
   renderPanels(s);
   renderAlarmBanner(s);

@@ -111,7 +111,7 @@ export const ScenarioEngine = {
 
       // Auto-SCRAM at trip limit
       if (DAO._s.CORE_TEMP.v > 1195 && !S.scramActive) {
-        dispatch(A.SCRAM);
+        dispatch(A.AUTO_SCRAM);
         dispatch(A.ADD_ALARM, { alarm:{ id:'DEMO-A-SCRAM', p:1, tag:'SCRAM', msg:'AUTO-SCRAM: Core temp exceeded trip limit 1195°C', acked:false, ts:ts() }});
         addAIMessage('🚨 AUTOMATIC SCRAM EXECUTED by Reactor Protection System. Core temp: ' + DAO._s.CORE_TEMP.v.toFixed(1) + '°C exceeded 1195°C setpoint. All control rods inserting. Shutdown initiated.');
         showDemoBar('✅ AUTO-SCRAM EXECUTED — Reactor Protection System actuated', '#159647');
@@ -174,7 +174,7 @@ export const ScenarioEngine = {
 
       // Auto-SCRAM
       if (DAO._s.CORE_TEMP.v > 1180 && !S.scramActive) {
-        dispatch(A.SCRAM);
+        dispatch(A.AUTO_SCRAM);
         dispatch(A.ADD_ALARM, { alarm:{ id:'DEMO-B-SCRAM', p:1, tag:'SCRAM', msg:'AUTO-SCRAM: Core temp/flow trip actuated by RPS', acked:false, ts:ts() }});
         addAIMessage('🚨 REACTOR PROTECTION SYSTEM ACTUATED. Core temp ' + DAO._s.CORE_TEMP.v.toFixed(1) + '°C, primary flow < 40% nominal. All control rods inserting. Passive lead cooling: ACTIVATED.');
         showDemoBar('✅ RPS SCRAM EXECUTED — Passive lead cooling now active', '#159647');
@@ -242,7 +242,7 @@ export const ScenarioEngine = {
 
       // Auto-SCRAM at step 8+ or if SCRAM voltage trips
       if ((step >= 8 || DAO._s.SCRAM_V.v < 38.5) && !S.scramActive) {
-        dispatch(A.SCRAM);
+        dispatch(A.AUTO_SCRAM);
         dispatch(A.ADD_ALARM, { alarm:{ id:'DEMO-C-SCRAM', p:1, tag:'SCRAM', msg:'PASSIVE SCRAM: Gravity-drop rods by SCRAM bus undervoltage', acked:false, ts:ts() }});
         addAIMessage('✅ PASSIVE SCRAM COMPLETE. Gravity-drop control rods fully inserted. Decay heat removal via passive lead-bismuth convection. Core temp trending toward stable. Plant in SAFE SHUTDOWN state.');
         showDemoBar('✅ PASSIVE SCRAM & SAFE SHUTDOWN — Passive LBE cooling active', '#159647');
