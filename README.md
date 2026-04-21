@@ -9,18 +9,17 @@ CORE-SENTINEL is a mission-critical High-Performance HMI logic layer designed fo
 
 ---
 
-## 🚀 Key Modules & Features
+##  Key Modules & Features
 
-### 💎 3D Digital Twin Integration
+###  3D Digital Twin Integration
 Real-time synchronization with the reactor core via Three.js. Provides operators with a high-fidelity visual representation of control rod positions, coolant flow patterns, and thermal gradients.
-
-### 🛡️ Safety-Critical RBAC Guards
+###  Safety-Critical RBAC Guards
 Unconditional Enforcement of **ISA-101 §6.5** security guards. Critical operations (SCRAM, Interlock Reset) are hard-bound to specific roles (Operation Director, System Admin) at the state-machine level, preventing unauthorized or accidental triggers.
 
-### 🌪️ Emergency Scenario Engine
+###  Emergency Scenario Engine
 A built-in physics simulation for stress-testing and training. High-fidelity simulation of LOCA (Loss of Coolant), Station Blackout, and Thermal Escalation scenarios with autonomous AI advisory integration.
 
-### 🚨 Smart Alarm Management
+###  Smart Alarm Management
 Fully compliant with **ISA-101 §5**:
 *   **First-Out Tracking**: Automatically identifies the root cause in an alarm cascade.
 *   **Intelligent Shelving**: Suppression of nuisance alarms during maintenance or known transients.
