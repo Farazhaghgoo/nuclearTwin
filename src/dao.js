@@ -1,33 +1,47 @@
+import config from '../hmi-config.json';
+
 // Abstracts Physical sensors vs Simulated (Politecnico) physics model
 // ═══════════════════════════════════════════════════════════════════
 export const DAO = {
   mode: 'SIMULATED',
 
-  NOMINAL: {
-    CORE_TEMP:1045.2, COOLANT_IN:542.4, COOLANT_OUT:823.1, PRIM_PRESS:214.8,
-    PUMP_A:3200, PUMP_B:3185, NEUTRON_FLUX:3.42, FUEL_BURNUP:24.7,
-    SG_INLET:480.2, STEAM_PRESS:165.4, TURBINE_RPM:3000, GRID_OUT:478.2,
-    ROD_POS:72.4, SCRAM_V:48.2, LEAD_LEVEL:98.7, SEC_FLOW:2840,
+  // Nominal values from config
+  NOMINAL: Object.fromEntries(
+    Object.entries(config.sensors).map(([k, v]) => [k, v.nominalHigh])
+  ),
+
+  // Initial sensor map (partially driven by config)
+  _s: {
+    CORE_TEMP:    { tag:'T-CORE-01', label:'Core Temperature',        sys:'Primary',   u:'°C',          vlt:1.4  },
+    COOLANT_IN:   { tag:'T-CL-IN-01',label:'Coolant Inlet Temp',      sys:'Primary',   u:'K',           vlt:0.7  },
+    COOLANT_OUT:  { tag:'T-CL-OUT-01',label:'Coolant Outlet Temp',    sys:'Primary',   u:'K',           vlt:0.8  },
+    PRIM_PRESS:   { tag:'P-PRI-01',  label:'Primary Pressure ΔP',     sys:'Primary',   u:'PSI',         vlt:0.55 },
+    PUMP_A:       { tag:'N-PMP-A-01',label:'Pump A Speed',            sys:'Primary',   u:'RPM',         vlt:5    },
+    PUMP_B:       { tag:'N-PMP-B-01',label:'Pump B Speed',            sys:'Secondary', u:'RPM',         vlt:5    },
+    NEUTRON_FLUX: { tag:'F-NEUT-01', label:'Neutron Flux',            sys:'Primary',   u:'e14 n/cm²·s', vlt:0.02 },
+    FUEL_BURNUP:  { tag:'B-FUEL-01', label:'Fuel Burnup',             sys:'Primary',   u:'GWd/t',       vlt:0    },
+    SG_INLET:     { tag:'T-SG-IN-01',label:'SG Inlet Temperature',    sys:'Secondary', u:'°C',          vlt:0.65 },
+    STEAM_PRESS:  { tag:'P-STM-01',  label:'Steam Pressure',          sys:'Secondary', u:'bar',         vlt:0.28 },
+    TURBINE_RPM:  { tag:'N-TRB-01',  label:'Turbine Speed',           sys:'Secondary', u:'RPM',         vlt:3    },
+    GRID_OUT:     { tag:'P-GRID-01', label:'Grid Electrical Output',  sys:'Grid',      u:'MWe',         vlt:0.4  },
+    ROD_POS:      { tag:'R-ROD-AVG', label:'Control Rod Pos (avg)',   sys:'Safety',    u:'%',           vlt:0.08 },
+    SCRAM_V:      { tag:'V-SCR-01',  label:'SCRAM Bus Voltage',       sys:'Safety',    u:'V',           vlt:0.04 },
+    LEAD_LEVEL:   { tag:'L-PB-01',   label:'Lead Coolant Level',      sys:'Primary',   u:'%',           vlt:0.04 },
+    SEC_FLOW:     { tag:'F-SEC-01',  label:'Secondary Flow Rate',     sys:'Secondary', u:'kg/s',        vlt:3.5  },
   },
 
-  _s: {
-    CORE_TEMP:    { tag:'T-CORE-01', label:'Core Temperature',        sys:'Primary',   v:1045.2, u:'°C',          trip:1200, low:900,  vlt:1.4  },
-    COOLANT_IN:   { tag:'T-CL-IN-01',label:'Coolant Inlet Temp',      sys:'Primary',   v:542.4,  u:'K',           trip:620,  low:480,  vlt:0.7  },
-    COOLANT_OUT:  { tag:'T-CL-OUT-01',label:'Coolant Outlet Temp',    sys:'Primary',   v:823.1,  u:'K',           trip:900,  low:750,  vlt:0.8  },
-    PRIM_PRESS:   { tag:'P-PRI-01',  label:'Primary Pressure ΔP',     sys:'Primary',   v:214.8,  u:'PSI',         trip:250,  low:150,  vlt:0.55 },
-    PUMP_A:       { tag:'N-PMP-A-01',label:'Pump A Speed',            sys:'Primary',   v:3200,   u:'RPM',         trip:3600, low:2800, vlt:5    },
-    PUMP_B:       { tag:'N-PMP-B-01',label:'Pump B Speed',            sys:'Secondary', v:3185,   u:'RPM',         trip:3600, low:2800, vlt:5    },
-    NEUTRON_FLUX: { tag:'F-NEUT-01', label:'Neutron Flux',            sys:'Primary',   v:3.42,   u:'e14 n/cm²·s', trip:4.0, low:2.5,  vlt:0.02 },
-    FUEL_BURNUP:  { tag:'B-FUEL-01', label:'Fuel Burnup',             sys:'Primary',   v:24.7,   u:'GWd/t',       trip:60,   low:0,    vlt:0    },
-    SG_INLET:     { tag:'T-SG-IN-01',label:'SG Inlet Temperature',    sys:'Secondary', v:480.2,  u:'°C',          trip:550,  low:420,  vlt:0.65 },
-    STEAM_PRESS:  { tag:'P-STM-01',  label:'Steam Pressure',          sys:'Secondary', v:165.4,  u:'bar',         trip:180,  low:130,  vlt:0.28 },
-    TURBINE_RPM:  { tag:'N-TRB-01',  label:'Turbine Speed',           sys:'Secondary', v:3000,   u:'RPM',         trip:3200, low:2800, vlt:3    },
-    GRID_OUT:     { tag:'P-GRID-01', label:'Grid Electrical Output',  sys:'Grid',      v:478.2,  u:'MWe',         trip:510,  low:400,  vlt:0.4  },
-    ROD_POS:      { tag:'R-ROD-AVG', label:'Control Rod Pos (avg)',   sys:'Safety',    v:72.4,   u:'%',           trip:95,   low:5,    vlt:0.08 },
-    SCRAM_V:      { tag:'V-SCR-01',  label:'SCRAM Bus Voltage',       sys:'Safety',    v:48.2,   u:'V',           trip:0,    low:40,   vlt:0.04 },
-    LEAD_LEVEL:   { tag:'L-PB-01',   label:'Lead Coolant Level',      sys:'Primary',   v:98.7,   u:'%',           trip:0,    low:90,   vlt:0.04 },
-    SEC_FLOW:     { tag:'F-SEC-01',  label:'Secondary Flow Rate',     sys:'Secondary', v:2840,   u:'kg/s',        trip:3200, low:2400, vlt:3.5  },
+  init() {
+    Object.entries(this._s).forEach(([k, s]) => {
+      const cfg = config.sensors[k];
+      if (cfg) {
+        s.v    = cfg.nominalHigh;
+        s.trip = cfg.tripHigh;
+        s.low  = cfg.tripLow;
+        s.u    = cfg.unit; // Override internal unit with config unit
+      }
+    });
   },
+
 
   tick(scramActive) {
     Object.entries(this._s).forEach(([k, s]) => {

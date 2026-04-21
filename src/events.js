@@ -5,6 +5,7 @@ import { dispatch, scheduleRender } from './reducer.js';
 import { ts, p2, p3, escHtml, dlFile, setText, setAttr } from '../utils.js';
 import { ScenarioEngine } from './scenario-engine.js';
 import { renderDiagnostics } from './views/render.js';
+import { RBACContext, bindGuardedButton } from './rbac-factory.js';
 
 
 // ═══════════════════════════════════════════════════════════════════
@@ -87,12 +88,10 @@ export function bindAll() {
       if (aiTs) aiTs.textContent = ts();
 
       // ── RBAC: activate component factory for this role ──────────
-      if (window.RBACContext) {
-        RBACContext.setRole(role);
-        // Show Cybersecurity nav item only for AS
-        const navCyber = document.getElementById('nav-cyber');
-        if (navCyber) navCyber.style.display = role === 'AS' ? '' : 'none';
-      }
+      RBACContext.setRole(role);
+      // Show Cybersecurity nav item only for AS
+      const navCyber = document.getElementById('nav-cyber');
+      if (navCyber) navCyber.style.display = role === 'AS' ? '' : 'none';
     });
   });
 
@@ -221,7 +220,7 @@ export function bindAll() {
   // ── Guarded Buttons (Safety Critical — IDs from component-registry.js) ──
 
   // SCRAM Control (CMP-09)
-  window.bindGuardedButton('btn-scram', 'CMP-09', 'U', () => {
+  bindGuardedButton('btn-scram', 'CMP-09', 'U', () => {
     if (S.scramActive) return;
     showModal({
       icon:'power_settings_new', title:'⚠ CONFIRM SCRAM',
@@ -236,7 +235,7 @@ export function bindAll() {
   }, showModal);
 
   // Emergency Depressurize (CMP-12)
-  window.bindGuardedButton('btn-depressurize', 'CMP-12', 'U', () => {
+  bindGuardedButton('btn-depressurize', 'CMP-12', 'U', () => {
     showModal({
       icon:'warning', title:'Emergency Depressurize',
       content:'<p class="tv text-sm text-[#d97d06]">Confirm secondary circuit depressurization?</p>',
@@ -248,7 +247,7 @@ export function bindAll() {
   }, showModal);
 
   // Reset Interlocks (CMP-13)
-  window.bindGuardedButton('btn-reset-locks', 'CMP-13', 'U', () => {
+  bindGuardedButton('btn-reset-locks', 'CMP-13', 'U', () => {
     showModal({
       icon:'settings', title:'Reset Protection Interlocks',
       content:'<p class="tv text-sm text-[#343a40]">Reset all non-SCRAM interlocks to ARMED state.</p>',
@@ -258,12 +257,12 @@ export function bindAll() {
   }, showModal);
 
   // Auto-Pilot Toggle (CMP-17)
-  window.bindGuardedButton('btn-auto-pilot', 'CMP-17', 'U', () => {
+  bindGuardedButton('btn-auto-pilot', 'CMP-17', 'U', () => {
     dispatch(A.TOGGLE_AUTOPILOT);
   }, showModal);
 
   // Diagnostic Export (CMP-19)
-  window.bindGuardedButton('btn-diag-export', 'CMP-19', 'R', () => {
+  bindGuardedButton('btn-diag-export', 'CMP-19', 'R', () => {
     const csv = 'Tag,Label,Value\n' + Object.values(S.sensors).map(s=>`"${s.tag}","${s.label}","${s.v}"`).join('\n');
     dlFile(csv, `sensors-${Date.now()}.csv`, 'text/csv');
   }, showModal);
@@ -324,7 +323,7 @@ export function startDataLoop() {
   setInterval(() => {
     if (!S.role) return;
     DAO.tick(S.scramActive);
-    dispatch(A.TICK);
+    dispatch(A.TICK, { snapshot: DAO.snapshot() });
 
     if (S.lastActivity && !_sessionWarnShown) {
       const idleMs = Date.now() - S.lastActivity;

@@ -1,11 +1,14 @@
 import { S } from './model.js';
+import { DAO } from './dao.js';
 import { bindAll, resetSessionTimer, startClock, startDataLoop } from './events.js';
 import { initThreeJS } from './three-twin.js';
 import { scheduleRender, dispatch } from './reducer.js';
 import { ACTION_TYPES as A } from '../constants/actionTypes.js';
 
 document.addEventListener('DOMContentLoaded', () => {
-  // ISA-5.1 tag validation at startup (silently checks DAO)
+  // Initialize DAO from config (ISA-101 §5.4)
+  DAO.init();
+
   bindAll();
   startClock();
   startDataLoop();

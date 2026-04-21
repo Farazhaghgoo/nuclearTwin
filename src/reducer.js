@@ -5,7 +5,6 @@
  * Pure function: (state, intent, payload) => newState
  * All state updates use immutable spread patterns — no direct mutation.
  */
-import { DAO } from './dao.js';
 import { S, setS, mkModel } from './model.js';
 import { mkEntry } from '../utils.js';
 import { render } from './views/render.js';
@@ -164,13 +163,15 @@ export function reduce(s, intent, p = {}) {
       };
 
     // ── Sensor Telemetry ──────────────────────────────────────────────────
-    case A.TICK:
+    case A.TICK: {
+      const snap = p.snapshot || s.sensors;
       return {
         ...s,
-        sensors:   DAO.snapshot(),
-        histTemp:  [...s.histTemp.slice(-19),  s.sensors.CORE_TEMP?.v  ?? 1045],
-        histPress: [...s.histPress.slice(-19), s.sensors.PRIM_PRESS?.v ?? 215],
+        sensors:   snap,
+        histTemp:  [...s.histTemp.slice(-19),  snap.CORE_TEMP?.v  ?? 1045],
+        histPress: [...s.histPress.slice(-19), snap.PRIM_PRESS?.v ?? 215],
       };
+    }
 
     // ── Audit & UI ────────────────────────────────────────────────────────
     case A.LOG:

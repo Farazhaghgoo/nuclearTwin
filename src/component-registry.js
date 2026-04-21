@@ -327,111 +327,111 @@ const COMPONENT_REGISTRY = [
 // ═════════════════════════════════════════════════════════════════════
 const DESIGN_TOKENS = {
 
-  // Trend chart standard: dark bg, muted stroke, red trip line, dashed prediction
+  // Trend chart standard: light bg, muted stroke, red trip line, dashed prediction
   TREND_STD_01: {
-    bg:         '#0f1114',
-    border:     'rgba(255,255,255,.06)',
-    line_rt:    '#e0e4e8',      // real-time: ISA-101 light grey
-    line_pred:  '#7a8590',      // prediction: muted grey dashed
-    line_trip:  '#ff2020',      // trip setpoint: ISA-101 Priority 1 red
+    bg:         '#f4f6f8',
+    border:     'rgba(0,0,0,.06)',
+    line_rt:    '#212529',      // real-time: ISA-101 dark grey
+    line_pred:  '#343a40',      // prediction: muted dark dashed
+    line_trip:  '#e31a1a',      // trip setpoint: ISA-101 Priority 1 red
     stroke_w_rt:    1.8,
     stroke_w_pred:  1.3,
-    text_label: '#4a5260',
-    text_value: '#e0e4e8',
+    text_label: '#6c757d',
+    text_value: '#212529',
   },
 
   // State / KPI card standard
   STATE_STD_01: {
-    bg:           '#0f1114',
-    border:       'rgba(255,255,255,.06)',
-    border_alarm: 'rgba(255,32,32,.3)',
-    bg_alarm:     'rgba(255,32,32,.06)',
-    text_label:   '#4a5260',
-    text_value:   '#e0e4e8',
-    text_alarm:   '#ff2020',
-    text_warn:    '#ffd020',
-    text_nominal: '#e0e4e8',
-    bar_nominal:  '#20c060',
-    bar_warn:     '#ffd020',
-    bar_alarm:    '#ff2020',
+    bg:           '#f4f6f8',
+    border:       'rgba(0,0,0,.06)',
+    border_alarm: 'rgba(227,26,26,.3)',
+    bg_alarm:     'rgba(227,26,26,.06)',
+    text_label:   '#6c757d',
+    text_value:   '#212529',
+    text_alarm:   '#e31a1a',
+    text_warn:    '#d97d06',
+    text_nominal: '#212529',
+    bar_nominal:  '#159647',
+    bar_warn:     '#d97d06',
+    bar_alarm:    '#e31a1a',
   },
 
   // Alarm list / banner standard: ISA-101 reserved alarm colours
   ALARM_STD_01: {
-    p1_color:   '#ff2020',   // Priority 1 — Critical (red)
-    p1_bg:      '#160404',
-    p2_color:   '#ffd020',   // Priority 2 — High (yellow)
-    p2_bg:      '#161300',
-    p3_color:   '#ff8020',   // Priority 3 — Medium (orange)
-    p3_bg:      '#160900',
-    acked_color:'#3a4050',   // Acknowledged: greyed
-    text_label: '#4a5260',
-    text_msg:   '#e0e4e8',
+    p1_color:   '#e31a1a',   // Priority 1 — Critical (red)
+    p1_bg:      '#fcdcdc',
+    p2_color:   '#d97d06',   // Priority 2 — High (yellow/orange)
+    p2_bg:      '#fcecd5',
+    p3_color:   '#cd5c08',   // Priority 3 — Medium (orange)
+    p3_bg:      '#fce3d5',
+    acked_color:'#adb5bd',   // Acknowledged: greyed
+    text_label: '#6c757d',
+    text_msg:   '#212529',
   },
 
   // P&ID schematic standard
   PID_STD_01: {
-    pipe_cold:    '#7a8590',    // cold leg pipes
-    pipe_hot:     '#ff8020',    // hot leg pipes (orange)
-    pipe_steam:   '#ff8020',    // steam lines dashed
-    box_fill:     '#2a2f36',
-    box_stroke:   '#5a6573',
-    text_label:   '#7a8590',
-    text_value:   '#4a5260',
-    label_hot:    '#ff8020',
-    label_cold:   '#7a8590',
+    pipe_cold:    '#343a40',    // cold leg pipes
+    pipe_hot:     '#cd5c08',    // hot leg pipes (orange)
+    pipe_steam:   '#cd5c08',    // steam lines dashed
+    box_fill:     '#ced4da',
+    box_stroke:   '#495057',
+    text_label:   '#343a40',
+    text_value:   '#6c757d',
+    label_hot:    '#cd5c08',
+    label_cold:   '#343a40',
   },
 
   // Action / actuator button standard
   ACTION_STD_01: {
-    scram_bg:     '#ff2020',     // SCRAM button
-    scram_border: '#ff2020',
-    warn_border:  '#ffd020',
-    warn_text:    '#ffd020',
-    neutral_bg:   '#22262b',
-    neutral_border:'rgba(255,255,255,.1)',
-    neutral_text: '#7a8590',
+    scram_bg:     '#e31a1a',     // SCRAM button
+    scram_border: '#e31a1a',
+    warn_border:  '#d97d06',
+    warn_text:    '#d97d06',
+    neutral_bg:   '#d1d6dc',
+    neutral_border:'rgba(0,0,0,.1)',
+    neutral_text: '#343a40',
     disabled_opacity: 0.25,
-    locked_color: '#4a5260',
+    locked_color: '#6c757d',
   },
 
   // AI feed / prediction standard
   AI_STD_01: {
-    bg_panel:     '#1a1d21',
-    border_normal:'#5a6573',
-    border_warn:  '#ffd020',
-    border_crit:  '#ff2020',
-    text_ts:      '#4a5260',
-    text_msg:     '#e0e4e8',
-    icon_color:   '#7a8590',
-    active_dot:   '#20c060',
+    bg_panel:     '#e2e6ea',
+    border_normal:'#495057',
+    border_warn:  '#d97d06',
+    border_crit:  '#e31a1a',
+    text_ts:      '#6c757d',
+    text_msg:     '#212529',
+    icon_color:   '#343a40',
+    active_dot:   '#159647',
   },
 
   // Data table standard
   TABLE_STD_01: {
-    bg_header:    '#22262b',
+    bg_header:    '#d1d6dc',
     bg_row_even:  'transparent',
-    bg_row_alarm: 'rgba(255,32,32,.05)',
-    bg_row_warn:  'rgba(255,208,32,.04)',
-    border_row:   'rgba(255,255,255,.04)',
-    text_header:  '#4a5260',
-    text_tag:     '#e0e4e8',
-    text_meta:    '#4a5260',
-    status_nominal:'#20c060',
-    status_warn:   '#ffd020',
-    status_alarm:  '#ff2020',
+    bg_row_alarm: 'rgba(227,26,26,.05)',
+    bg_row_warn:  'rgba(217,125,6,.04)',
+    border_row:   'rgba(0,0,0,.04)',
+    text_header:  '#6c757d',
+    text_tag:     '#212529',
+    text_meta:    '#6c757d',
+    status_nominal:'#159647',
+    status_warn:   '#d97d06',
+    status_alarm:  '#e31a1a',
   },
 
   // Digital twin 3D viewport standard
   TWIN_STD_01: {
-    bg_container:     '#0f1114',
-    hud_bg:           'rgba(26,29,33,.85)',
-    hud_border:       'rgba(255,255,255,.1)',
-    emergency_glow:   'rgba(255,32,32,.12)',
-    wire_nominal:     0x5a6573,
-    wire_danger:      0xff2020,
-    text_value:       '#e0e4e8',
-    text_unit:        '#4a5260',
+    bg_container:     '#f4f6f8',
+    hud_bg:           'rgba(226,230,234,.85)',
+    hud_border:       'rgba(0,0,0,.1)',
+    emergency_glow:   'rgba(227,26,26,.12)',
+    wire_nominal:     0x495057,
+    wire_danger:      0xe31a1a,
+    text_value:       '#212529',
+    text_unit:        '#6c757d',
   },
 };
 
@@ -479,10 +479,11 @@ function getComponent(id) {
   return COMPONENT_REGISTRY.find(c => c.id === id);
 }
 
-// Export to global scope for use in script.js
-window.COMPONENT_REGISTRY = COMPONENT_REGISTRY;
-window.DESIGN_TOKENS       = DESIGN_TOKENS;
-window.canAccess           = canAccess;
-window.getVisibleComponents = getVisibleComponents;
-window.getComponent        = getComponent;
-window.parseAccess         = parseAccess;
+export {
+  COMPONENT_REGISTRY,
+  DESIGN_TOKENS,
+  canAccess,
+  getVisibleComponents,
+  getComponent,
+  parseAccess
+};

@@ -5,6 +5,14 @@
 // ║  renders ISA-101 standard shells, and enforces fallback logic   ║
 // ╚══════════════════════════════════════════════════════════════════╝
 
+import {
+  COMPONENT_REGISTRY,
+  DESIGN_TOKENS,
+  canAccess,
+  getComponent,
+  parseAccess
+} from './component-registry.js';
+
 // ─────────────────────────────────────────────────────────────────────
 // SECTION 1: ISA-101 STANDARD VISUALIZATION SHELLS
 // Each function returns an HTMLElement styled to the given token set
@@ -465,9 +473,11 @@ function renderRoleSummary(role) {
 // SECTION 6: EXPORT TO GLOBAL SCOPE
 // ─────────────────────────────────────────────────────────────────────
 
-window.ComponentFactory  = ComponentFactory;
-window.RBACContext       = RBACContext;
-window.VizShells         = VizShells;
-window.guardedClick      = guardedClick;
-window.bindGuardedButton = bindGuardedButton;
-window.renderRoleSummary = renderRoleSummary;
+export {
+  ComponentFactory,
+  RBACContext,
+  VizShells,
+  guardedClick,
+  bindGuardedButton,
+  renderRoleSummary
+};

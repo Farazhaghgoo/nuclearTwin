@@ -368,11 +368,15 @@ describe('Control', () => {
 // ═════════════════════════════════════════════════════════════════════════════
 describe('Sensor Telemetry (TICK)', () => {
 
-  test('TICK: merges DAO snapshot into sensors', () => {
-    const s    = mk({ role: 'OD' });
-    const next = reduce(s, A.TICK);
-    expect(next.sensors.CORE_TEMP.v).toBe(1050);   // from DAO mock
-    expect(next.sensors.PRIM_PRESS.v).toBe(215);
+  test('TICK: merges sensor snapshot from payload into state', () => {
+    const s = mk({ role: 'OD' });
+    const snapshot = {
+      CORE_TEMP:  { tag: 'T-CORE-01', v: 1120, unit: '°C'  },
+      PRIM_PRESS: { tag: 'P-PRI-01',  v: 222,  unit: 'PSI' },
+    };
+    const next = reduce(s, A.TICK, { snapshot });
+    expect(next.sensors.CORE_TEMP.v).toBe(1120);
+    expect(next.sensors.PRIM_PRESS.v).toBe(222);
   });
 
   test('TICK: appends latest temp to histTemp (capped at 20 entries)', () => {
