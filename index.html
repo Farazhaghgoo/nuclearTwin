@@ -148,6 +148,10 @@
       <button class="nav-t tv text-[11px] px-3 h-full border-b-2 border-transparent text-[#6c757d] hover:text-[#343a40] uppercase font-bold" data-panel="panel-safety">Safety</button>
       <button class="nav-t tv text-[11px] px-3 h-full border-b-2 border-transparent text-[#6c757d] hover:text-[#343a40] uppercase font-bold" data-panel="panel-ai">AI Copilot</button>
       <button class="nav-t tv text-[11px] px-3 h-full border-b-2 border-transparent text-[#6c757d] hover:text-[#343a40] uppercase font-bold" data-panel="panel-diagnostics">Diagnostics</button>
+      <!-- CMP-24: Config Manager nav — AS only, hidden by default -->
+      <button id="nav-config-tab" class="nav-t tv text-[11px] px-3 h-full border-b-2 border-transparent text-[#6c757d] hover:text-[#343a40] uppercase font-bold" data-panel="panel-config" style="display:none">
+        <span class="flex items-center gap-1"><span class="ms material-symbols-outlined text-[13px]">tune</span> Config</span>
+      </button>
     </nav>
   </div>
 
@@ -271,6 +275,10 @@
       <!-- CMP-23: Cybersecurity nav — AS only, rendered by ComponentFactory -->
       <button id="nav-cyber" class="nav-s w-full flex items-center gap-3 px-4 py-2.5 tv text-[11px] text-[#6c757d] hover:text-[#343a40] hover:bg-[#d1d6dc] text-left border-r-4 border-transparent" data-panel="panel-cyber" style="display:none">
         <span class="ms material-symbols-outlined text-[15px]">shield</span> Cybersecurity
+      </button>
+      <!-- CMP-24: Platform Config Manager — AS only (SCR-14) -->
+      <button id="nav-config" class="nav-s w-full flex items-center gap-3 px-4 py-2.5 tv text-[11px] text-[#6c757d] hover:text-[#343a40] hover:bg-[#d1d6dc] text-left border-r-4 border-transparent" data-panel="panel-config" style="display:none">
+        <span class="ms material-symbols-outlined text-[15px]">tune</span> Config Manager
       </button>
     </nav>
 
@@ -646,6 +654,16 @@
         </div>
       </div>
     </div><!-- /panel-cyber -->
+
+    <!-- ───────── PANEL: PLATFORM CONFIG MANAGER — SCR-14 (AS only — CMP-24) ───────── -->
+    <div id="panel-config" class="panel flex-col">
+      <!-- Content is fully managed by render-config.js / renderConfigPanel(s) -->
+      <!-- Placeholder shown before first render -->
+      <div class="flex flex-col items-center justify-center h-full gap-4 text-[#adb5bd]">
+        <span class="ms material-symbols-outlined text-5xl">tune</span>
+        <div class="tv text-[11px] uppercase tracking-widest">Platform Configuration Manager — Loading…</div>
+      </div>
+    </div><!-- /panel-config -->
 
   </main>
 </div>

@@ -320,6 +320,21 @@ const COMPONENT_REGISTRY = [
     dom_id: 'cyber-panel',
     panel: 'ALL',
   },
+  {
+    id: 'CMP-24',
+    label: 'Platform Configuration Manager',
+    screen: 'SCR-14',
+    tipologia_ui: 'ConfigPanel',
+    standard_viz: 'ACTION_STD_01',
+    fonte_dati: 'CONFIG',
+    frequenza: 'event',
+    // WP 1.3: OL=no access, OD=read-only (can view), AS=full CRUD
+    access: { OL: 'X', OD: 'R', AS: 'C/R/U/D' },
+    fallback: { degraded: 'DISABLED', offline: 'DISABLED' },
+    dom_id: 'panel-config',
+    panel: 'panel-config',
+    description: 'No-code graphical configuration — sensors, streams, taxonomy, versioning. AAS IEC 63278 / ISA-101 §5.4',
+  },
 ];
 
 // ═════════════════════════════════════════════════════════════════════

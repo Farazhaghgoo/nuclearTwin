@@ -49,6 +49,9 @@ export const mkModel = () => ({
   auditLog: [],
   auditPanelOpen: false,
   demoMode: false,
+
+  // SCR-14 Platform Configuration Manager (CMP-24) — AS only
+  configActiveTab: 'overview',
 });
 
 

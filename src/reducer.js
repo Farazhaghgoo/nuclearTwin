@@ -21,6 +21,11 @@ export const INTENT_PERMISSIONS = Object.freeze({
   [A.SHELF_ALARM]:       ['OD', 'AS'],
   [A.UNSHELVE_ALARM]:    ['OD', 'AS'],
   [A.ADVANCE_PROTOCOL]:  ['OD', 'AS'],
+  // Config layer — write actions restricted to AS (SCR-14)
+  [A.CONFIG_UPDATE]:     ['AS'],
+  [A.CONFIG_ROLLBACK]:   ['AS'],
+  [A.CONFIG_IMPORT]:     ['AS'],
+  [A.CONFIG_RESET]:      ['AS'],
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -191,6 +196,41 @@ export function reduce(s, intent, p = {}) {
 
     case A.SET_DEMO_MODE:
       return { ...s, demoMode: p.active };
+
+    // ── Configuration Layer (WP 1.3 — AAS IEC 63278 / ISA-101 §5.4) ─────────
+    // ConfigService handles its own persistence; the reducer only manages
+    // UI state (active tab) and the audit log.
+
+    case A.CONFIG_UPDATE:
+      return {
+        ...s,
+        configActiveTab: s.configActiveTab ?? 'measures',
+        auditLog: log(`CONFIG UPDATE [${p.submodel ?? 'measures'}] v${p.version ?? '—'} — ${p.reason ?? ''}`),
+      };
+
+    case A.CONFIG_ROLLBACK:
+      return {
+        ...s,
+        configActiveTab: 'versions',
+        auditLog: log(`CONFIG ROLLBACK to ${p.targetVersion ?? '—'} — ${p.reason ?? ''}`),
+      };
+
+    case A.CONFIG_IMPORT:
+      return {
+        ...s,
+        configActiveTab: 'overview',
+        auditLog: log(`CONFIG IMPORT — ${p.reason ?? ''}`),
+      };
+
+    case A.CONFIG_RESET:
+      return {
+        ...s,
+        configActiveTab: 'overview',
+        auditLog: log('CONFIG FACTORY RESET'),
+      };
+
+    case A.CONFIG_TAB_CHANGE:
+      return { ...s, configActiveTab: p.tab ?? 'overview' };
 
     default:
       return s;

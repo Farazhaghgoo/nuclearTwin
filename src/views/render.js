@@ -2,6 +2,7 @@ import { ACTION_TYPES as A } from '../../constants/actionTypes.js';
 import { DAO } from '../dao.js';
 import { ts, pct, setText, setAttr, dlFile } from '../../utils.js';
 import { dispatch, scheduleRender } from '../reducer.js';
+import { renderConfigPanel } from './render-config.js';
 
 // ═══════════════════════════════════════════════════════════════════
 export function render(s) {
@@ -20,6 +21,7 @@ export function render(s) {
   renderCopilotSteps(s);
   renderSystemHealth(s);
   renderCyberPanel(s);
+  renderConfigPanel(s);   // SCR-14 — Platform Configuration Manager (CMP-24)
 }
 
 export function renderRole(s) {

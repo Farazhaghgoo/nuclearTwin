@@ -92,6 +92,11 @@ export function bindAll() {
       // Show Cybersecurity nav item only for AS
       const navCyber = document.getElementById('nav-cyber');
       if (navCyber) navCyber.style.display = role === 'AS' ? '' : 'none';
+      // Show Config Manager nav items only for AS (CMP-24 / SCR-14)
+      const navConfig = document.getElementById('nav-config');
+      if (navConfig) navConfig.style.display = role === 'AS' ? '' : 'none';
+      const navConfigTab = document.getElementById('nav-config-tab');
+      if (navConfigTab) navConfigTab.style.display = role === 'AS' ? '' : 'none';
     });
   });
 
