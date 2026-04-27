@@ -16,10 +16,10 @@ import { ACTION_TYPES as A } from '../../constants/actionTypes.js';
 const P_LABEL = { 1: 'P1 — Critical', 2: 'P2 — Urgent', 3: 'P3 — High' };
 const P_COLOR = { 1: '#e31a1a', 2: '#d97d06', 3: '#cd5c08' };
 const SYS_COLOR = {
-  Primary:   '#212529',
+  Primary: '#212529',
   Secondary: '#495057',
-  Safety:    '#e31a1a',
-  Grid:      '#159647',
+  Safety: '#e31a1a',
+  Grid: '#159647',
 };
 
 // ── Pending changes buffer (local, not persisted until "Save as Version") ─────
@@ -93,12 +93,12 @@ export function renderConfigPanel(s) {
 
     <!-- ── Tab Bar ────────────────────────────────────────────────────── -->
     <div class="flex-shrink-0 flex border-b border-[rgba(0,0,0,.08)] bg-[#e2e6ea]">
-      ${_renderTabBtn('overview',  'info',         'Overview',   activeTab)}
-      ${_renderTabBtn('taxonomy',  'account_tree', 'Taxonomy',   activeTab)}
-      ${_renderTabBtn('devices',   'sensors',      'Devices',    activeTab)}
-      ${_renderTabBtn('measures',  'straighten',   'Measures',   activeTab)}
-      ${_renderTabBtn('streams',   'stream',       'Streams',    activeTab)}
-      ${_renderTabBtn('versions',  'history',      'Versions',   activeTab)}
+      ${_renderTabBtn('overview', 'info', 'Overview', activeTab)}
+      ${_renderTabBtn('taxonomy', 'account_tree', 'Taxonomy', activeTab)}
+      ${_renderTabBtn('devices', 'sensors', 'Devices', activeTab)}
+      ${_renderTabBtn('measures', 'straighten', 'Measures', activeTab)}
+      ${_renderTabBtn('streams', 'stream', 'Streams', activeTab)}
+      ${_renderTabBtn('versions', 'history', 'Versions', activeTab)}
     </div>
 
     <!-- ── Tab Content ───────────────────────────────────────────────── -->
@@ -117,8 +117,8 @@ function _renderTabBtn(id, icon, label, active) {
     <button data-cfg-tab="${id}"
       class="cfg-tab-btn flex items-center gap-1.5 px-4 py-2.5 tv text-[11px] font-bold uppercase tracking-wider transition-colors border-b-2
         ${isActive
-          ? 'border-[#212529] text-[#212529] bg-[#d1d6dc]'
-          : 'border-transparent text-[#6c757d] hover:text-[#343a40] hover:bg-[#d1d6dc]'}">
+      ? 'border-[#212529] text-[#212529] bg-[#d1d6dc]'
+      : 'border-transparent text-[#6c757d] hover:text-[#343a40] hover:bg-[#d1d6dc]'}">
       <span class="ms material-symbols-outlined text-[14px]">${icon}</span>
       ${label}
     </button>`;
@@ -127,13 +127,13 @@ function _renderTabBtn(id, icon, label, active) {
 // ── Route to correct tab renderer ────────────────────────────────────────────
 function _renderTab(tab, meta) {
   switch (tab) {
-    case 'overview':  return _tabOverview(meta);
-    case 'taxonomy':  return _tabTaxonomy();
-    case 'devices':   return _tabDevices();
-    case 'measures':  return _tabMeasures();
-    case 'streams':   return _tabStreams();
-    case 'versions':  return _tabVersions();
-    default:          return _tabOverview(meta);
+    case 'overview': return _tabOverview(meta);
+    case 'taxonomy': return _tabTaxonomy();
+    case 'devices': return _tabDevices();
+    case 'measures': return _tabMeasures();
+    case 'streams': return _tabStreams();
+    case 'versions': return _tabVersions();
+    default: return _tabOverview(meta);
   }
 }
 
@@ -143,7 +143,7 @@ function _renderTab(tab, meta) {
 function _tabOverview(meta) {
   const cv = meta.currentVersion;
   const standards = ConfigService.get('standards') ?? {};
-  const security  = ConfigService.get('security')  ?? {};
+  const security = ConfigService.get('security') ?? {};
 
   return `
     <div class="p-5 grid grid-cols-2 gap-5">
@@ -175,11 +175,11 @@ function _tabOverview(meta) {
         <div class="tv text-[11px] text-[#6c757d] uppercase tracking-widest mb-3">Platform Statistics</div>
         <div class="space-y-2">
           ${_statRow('Sensors Monitored', Object.keys(ConfigService.get('measures') ?? {}).length)}
-          ${_statRow('Data Streams',      Object.keys(ConfigService.get('streams') ?? {}).length)}
-          ${_statRow('Devices Registered',Object.keys(ConfigService.get('devices') ?? {}).length)}
-          ${_statRow('Config Versions',   meta.versionCount)}
-          ${_statRow('Asset ID',          meta.assetId ?? '—')}
-          ${_statRow('Project ID',        meta.projectId ?? '—')}
+          ${_statRow('Data Streams', Object.keys(ConfigService.get('streams') ?? {}).length)}
+          ${_statRow('Devices Registered', Object.keys(ConfigService.get('devices') ?? {}).length)}
+          ${_statRow('Config Versions', meta.versionCount)}
+          ${_statRow('Asset ID', meta.assetId ?? '—')}
+          ${_statRow('Project ID', meta.projectId ?? '—')}
         </div>
       </div>
 
@@ -188,11 +188,11 @@ function _tabOverview(meta) {
         <div class="tv text-[11px] text-[#6c757d] uppercase tracking-widest mb-3">Applicable Standards</div>
         <div class="space-y-1.5">
           ${Object.entries(standards).map(([k, v]) =>
-            `<div class="flex items-center justify-between py-0.5 border-b border-[rgba(0,0,0,.04)]">
-              <span class="tv text-[11px] text-[#6c757d] uppercase">${escHtml(k.replace(/_/g,' '))}</span>
+    `<div class="flex items-center justify-between py-0.5 border-b border-[rgba(0,0,0,.04)]">
+              <span class="tv text-[11px] text-[#6c757d] uppercase">${escHtml(k.replace(/_/g, ' '))}</span>
               <span class="tv text-[11px] font-bold text-[#343a40]">${escHtml(v)}</span>
             </div>`
-          ).join('')}
+  ).join('')}
         </div>
       </div>
 
@@ -201,11 +201,11 @@ function _tabOverview(meta) {
         <div class="tv text-[11px] text-[#6c757d] uppercase tracking-widest mb-3">Security Suite (IEC 62443)</div>
         <div class="space-y-1.5">
           ${Object.entries(security).map(([k, v]) =>
-            `<div class="flex items-center justify-between py-0.5 border-b border-[rgba(0,0,0,.04)]">
+    `<div class="flex items-center justify-between py-0.5 border-b border-[rgba(0,0,0,.04)]">
               <span class="tv text-[11px] text-[#6c757d] uppercase">${escHtml(k)}</span>
               <span class="tv text-[11px] font-bold text-[#343a40]">${escHtml(v)}</span>
             </div>`
-          ).join('')}
+  ).join('')}
         </div>
       </div>
 
@@ -241,7 +241,7 @@ function _tabTaxonomy() {
 function _renderTreeNode(node, depth) {
   const indent = depth * 20;
   const typeColor = { Plant: '#212529', System: '#343a40', Subsystem: '#495057' }[node.type] ?? '#6c757d';
-  const typeIcon  = { Plant: 'factory', System: 'category', Subsystem: 'settings_input_component' }[node.type] ?? 'circle';
+  const typeIcon = { Plant: 'factory', System: 'category', Subsystem: 'settings_input_component' }[node.type] ?? 'circle';
 
   const sensorChips = (node.sensors ?? []).map(key => {
     const m = ConfigService.get('measures')?.[key];
@@ -279,14 +279,14 @@ function _tabDevices() {
           <thead>
             <tr class="bg-[#e2e6ea]">
               ${['Tag', 'Label', 'System', 'Unit', 'Manufacturer', 'Protocol', 'AAS ID', 'Status']
-                .map(h => `<th class="tv text-[10px] text-[#6c757d] uppercase tracking-wider text-left px-3 py-2 border border-[rgba(0,0,0,.06)]">${h}</th>`)
-                .join('')}
+      .map(h => `<th class="tv text-[10px] text-[#6c757d] uppercase tracking-wider text-left px-3 py-2 border border-[rgba(0,0,0,.06)]">${h}</th>`)
+      .join('')}
             </tr>
           </thead>
           <tbody>
             ${entries.map(([key, d]) => {
-              const col = SYS_COLOR[d.system] ?? '#6c757d';
-              return `
+        const col = SYS_COLOR[d.system] ?? '#6c757d';
+        return `
                 <tr class="sr border-b border-[rgba(0,0,0,.04)]">
                   <td class="px-3 py-1.5 border border-[rgba(0,0,0,.06)]">
                     <span class="tv text-[11px] font-bold" style="color:${col}">${escHtml(d.tag)}</span>
@@ -305,7 +305,7 @@ function _tabDevices() {
                     </span>
                   </td>
                 </tr>`;
-            }).join('')}
+      }).join('')}
           </tbody>
         </table>
       </div>
@@ -317,10 +317,10 @@ function _tabDevices() {
 // ══════════════════════════════════════════════════════════════════════════════
 function _tabMeasures() {
   const measures = ConfigService.get('measures') ?? {};
-  const entries  = Object.entries(measures);
+  const entries = Object.entries(measures);
 
   const pendingCount = Object.keys(_pending).length;
-  const hasPending   = pendingCount > 0;
+  const hasPending = pendingCount > 0;
 
   return `
     <div class="flex flex-col h-full">
@@ -353,8 +353,8 @@ function _tabMeasures() {
           <thead>
             <tr class="bg-[#e2e6ea] sticky top-0 z-10">
               ${['Tag', 'Label', 'System', 'Priority', 'Trip High', 'Trip Low', 'Nominal High', 'Unit']
-                .map(h => `<th class="tv text-[10px] text-[#6c757d] uppercase tracking-wider text-left px-3 py-2 border border-[rgba(0,0,0,.06)] whitespace-nowrap">${h}</th>`)
-                .join('')}
+      .map(h => `<th class="tv text-[10px] text-[#6c757d] uppercase tracking-wider text-left px-3 py-2 border border-[rgba(0,0,0,.06)] whitespace-nowrap">${h}</th>`)
+      .join('')}
             </tr>
           </thead>
           <tbody>
@@ -367,7 +367,7 @@ function _tabMeasures() {
 
 function _measureRow(key, m) {
   const col = SYS_COLOR[m.sys] ?? '#6c757d';
-  const pc  = _pending[key] ?? {};
+  const pc = _pending[key] ?? {};
   const isDirty = Object.keys(pc).length > 0;
   const rowBg = isDirty ? 'background:rgba(217,125,6,0.04)' : '';
 
@@ -383,8 +383,8 @@ function _measureRow(key, m) {
         value="${escHtml(String(displayVal))}"
         class="cfg-measure-input tv text-[11px] w-24 px-2 py-1 border transition-colors outline-none focus:border-[#343a40]
           ${isPendingField
-            ? 'border-[#d97d06] bg-[rgba(217,125,6,.08)] text-[#d97d06] font-bold'
-            : 'border-[rgba(0,0,0,.1)] bg-[#f4f6f8] text-[#212529]'}"
+        ? 'border-[#d97d06] bg-[rgba(217,125,6,.08)] text-[#d97d06] font-bold'
+        : 'border-[rgba(0,0,0,.1)] bg-[#f4f6f8] text-[#212529]'}"
         step="any"
       />`;
   };
@@ -401,8 +401,8 @@ function _measureRow(key, m) {
         value="${escHtml(displayVal)}"
         class="cfg-measure-input tv text-[11px] w-24 px-2 py-1 border transition-colors outline-none focus:border-[#343a40]
           ${isPendingField
-            ? 'border-[#d97d06] bg-[rgba(217,125,6,.08)] text-[#d97d06] font-bold'
-            : 'border-[rgba(0,0,0,.1)] bg-[#f4f6f8] text-[#212529]'}"
+        ? 'border-[#d97d06] bg-[rgba(217,125,6,.08)] text-[#d97d06] font-bold'
+        : 'border-[rgba(0,0,0,.1)] bg-[#f4f6f8] text-[#212529]'}"
       />`;
   };
 
@@ -416,8 +416,8 @@ function _measureRow(key, m) {
         data-cfg-field="priority"
         class="cfg-measure-input tv text-[11px] w-32 px-2 py-1 border transition-colors outline-none focus:border-[#343a40]
           ${isPendingField
-            ? 'border-[#d97d06] bg-[rgba(217,125,6,.08)] text-[#d97d06] font-bold'
-            : 'border-[rgba(0,0,0,.1)] bg-[#f4f6f8] text-[#212529]'}">
+        ? 'border-[#d97d06] bg-[rgba(217,125,6,.08)] text-[#d97d06] font-bold'
+        : 'border-[rgba(0,0,0,.1)] bg-[#f4f6f8] text-[#212529]'}">
         ${[1, 2, 3].map(p =>
           `<option value="${p}" ${Number(currentP) === p ? 'selected' : ''}>${P_LABEL[p]}</option>`
         ).join('')}
@@ -457,8 +457,8 @@ function _tabStreams() {
         Data Stream Definitions — OPC UA / IEC 62541 / ProtoBuf Encoding
       </div>
       ${entries.map(([id, st]) => {
-        const enabledCol = st.enabled ? '#159647' : '#e31a1a';
-        return `
+    const enabledCol = st.enabled ? '#159647' : '#e31a1a';
+    return `
           <div class="border border-[rgba(0,0,0,.08)] bg-white p-4">
             <div class="flex items-center justify-between mb-3">
               <div class="flex items-center gap-3">
@@ -479,13 +479,13 @@ function _tabStreams() {
             <div class="tv text-[11px] text-[#6c757d] mb-2">Protocol: <strong class="text-[#343a40]">${escHtml(st.protocol)}</strong></div>
             <div class="flex flex-wrap gap-1.5">
               ${(st.sensors ?? []).map(key => {
-                const m = ConfigService.get('measures')?.[key];
-                const sysCol = SYS_COLOR[m?.sys ?? ''] ?? '#6c757d';
-                return `<span class="tv text-[10px] px-2 py-0.5 border font-bold" style="border-color:${sysCol}44;color:${sysCol};background:${sysCol}08">${escHtml(key)}</span>`;
-              }).join('')}
+      const m = ConfigService.get('measures')?.[key];
+      const sysCol = SYS_COLOR[m?.sys ?? ''] ?? '#6c757d';
+      return `<span class="tv text-[10px] px-2 py-0.5 border font-bold" style="border-color:${sysCol}44;color:${sysCol};background:${sysCol}08">${escHtml(key)}</span>`;
+    }).join('')}
             </div>
           </div>`;
-      }).join('')}
+  }).join('')}
     </div>`;
 }
 
@@ -494,8 +494,8 @@ function _tabStreams() {
 // ══════════════════════════════════════════════════════════════════════════════
 function _tabVersions() {
   const versions = ConfigService.getVersions();
-  const meta     = ConfigService.getMeta();
-  const audit    = ConfigService.getAuditLog().slice(0, 20);
+  const meta = ConfigService.getMeta();
+  const audit = ConfigService.getAuditLog().slice(0, 20);
 
   return `
     <div class="p-5 grid grid-cols-3 gap-5">
@@ -507,9 +507,9 @@ function _tabVersions() {
         </div>
         <div class="space-y-2">
           ${versions.slice(0, 30).map((v, i) => {
-            const isCurrent = v.id === meta.currentVersionId;
-            const isFirst   = i === versions.length - 1;
-            return `
+    const isCurrent = v.id === meta.currentVersionId;
+    const isFirst = i === versions.length - 1;
+    return `
               <div class="border ${isCurrent ? 'border-[#212529]' : 'border-[rgba(0,0,0,.08)]'} bg-white p-3 flex items-start justify-between gap-3">
                 <div class="flex items-start gap-3 flex-1 min-w-0">
                   <div class="flex flex-col items-center flex-shrink-0 mt-0.5">
@@ -520,7 +520,7 @@ function _tabVersions() {
                     <div class="flex items-center gap-2 flex-wrap">
                       <span class="tv text-[12px] font-bold ${isCurrent ? 'text-[#212529]' : 'text-[#495057]'}">${escHtml(v.label)}</span>
                       ${isCurrent ? '<span class="tv text-[10px] px-1.5 py-0.5 bg-[#212529] text-white font-bold">CURRENT</span>' : ''}
-                      ${isFirst   ? '<span class="tv text-[10px] px-1.5 py-0.5 bg-[#e2e6ea] text-[#6c757d]">FACTORY DEFAULT</span>' : ''}
+                      ${isFirst ? '<span class="tv text-[10px] px-1.5 py-0.5 bg-[#e2e6ea] text-[#6c757d]">FACTORY DEFAULT</span>' : ''}
                     </div>
                     <div class="tv text-[11px] text-[#6c757d] mt-0.5">
                       ${escHtml(new Date(v.ts).toLocaleString('it-IT'))} · <strong>${escHtml(v.user)}</strong> [${escHtml(v.role)}]
@@ -528,11 +528,11 @@ function _tabVersions() {
                     ${v.changes?.length > 0 ? `
                       <div class="mt-1.5 flex flex-wrap gap-1">
                         ${v.changes.slice(0, 5).map(c =>
-                          `<span class="tv text-[10px] px-1.5 py-0.5 bg-[rgba(0,0,0,.04)] text-[#6c757d]">
+      `<span class="tv text-[10px] px-1.5 py-0.5 bg-[rgba(0,0,0,.04)] text-[#6c757d]">
                             ${escHtml(c.path)}: <span class="text-[#e31a1a] line-through">${escHtml(String(c.oldValue))}</span>
                             → <span class="text-[#159647] font-bold">${escHtml(String(c.newValue))}</span>
                           </span>`
-                        ).join('')}
+    ).join('')}
                         ${v.changes.length > 5 ? `<span class="tv text-[10px] text-[#adb5bd]">+${v.changes.length - 5} more</span>` : ''}
                       </div>` : ''}
                   </div>
@@ -545,7 +545,7 @@ function _tabVersions() {
                     </button>` : ''}
                 </div>
               </div>`;
-          }).join('')}
+  }).join('')}
         </div>
       </div>
 
@@ -556,8 +556,8 @@ function _tabVersions() {
         </div>
         <div class="space-y-1.5">
           ${audit.length === 0
-            ? '<div class="tv text-[11px] text-[#adb5bd]">No audit entries yet</div>'
-            : audit.map(a => `
+      ? '<div class="tv text-[11px] text-[#adb5bd]">No audit entries yet</div>'
+      : audit.map(a => `
               <div class="border border-[rgba(0,0,0,.06)] bg-white p-2">
                 <div class="flex items-center gap-1.5 mb-0.5">
                   <span class="tv text-[10px] font-bold px-1 py-0.5 bg-[#e2e6ea] text-[#495057]">${escHtml(a.action.replace('CONFIG_', ''))}</span>
@@ -567,7 +567,7 @@ function _tabVersions() {
                 <div class="tv text-[10px] text-[#343a40]"><strong>${escHtml(a.user)}</strong> [${escHtml(a.role)}]</div>
                 <div class="tv text-[10px] text-[#6c757d] mt-0.5 truncate">${escHtml(a.reason)}</div>
               </div>`
-          ).join('')}
+      ).join('')}
         </div>
       </div>
 
@@ -589,9 +589,9 @@ function _bindConfigEvents(s) {
   // Measures: input changes → pending buffer
   document.querySelectorAll('.cfg-measure-input').forEach(inp => {
     inp.addEventListener('change', () => {
-      const key   = inp.getAttribute('data-cfg-measure');
+      const key = inp.getAttribute('data-cfg-measure');
       const field = inp.getAttribute('data-cfg-field');
-      let val     = inp.value.trim();
+      let val = inp.value.trim();
       if (inp.type === 'number' || field !== 'unit') {
         const n = parseFloat(val);
         if (!isNaN(n)) val = n;
@@ -623,8 +623,8 @@ function _bindConfigEvents(s) {
 
     const success = ConfigService.update('measures', delta, {
       reason: reason.trim(),
-      role:   s.role,
-      user:   `Operator (${s.role})`,
+      role: s.role,
+      user: `Operator (${s.role})`,
     });
 
     if (success) {
@@ -656,8 +656,8 @@ function _bindConfigEvents(s) {
       const jsonStr = ev.target.result;
       const result = ConfigService.import(jsonStr, {
         reason: `Imported from file: ${file.name}`,
-        role:   s.role,
-        user:   `Operator (${s.role})`,
+        role: s.role,
+        user: `Operator (${s.role})`,
       });
       if (result.ok) {
         alert(`Configuration imported successfully. ${result.version}`);
@@ -689,8 +689,8 @@ function _bindConfigEvents(s) {
 
       const ok = ConfigService.rollback(vId, {
         reason: reason.trim(),
-        role:   s.role,
-        user:   `Operator (${s.role})`,
+        role: s.role,
+        user: `Operator (${s.role})`,
       });
       if (ok) {
         _clearPending();
