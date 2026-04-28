@@ -3,6 +3,7 @@ import { DAO } from '../dao.js';
 import { ts, pct, setText, setAttr, dlFile } from '../../utils.js';
 import { dispatch, scheduleRender } from '../reducer.js';
 import { renderConfigPanel } from './render-config.js';
+import { ConfigService } from '../config-service.js';
 
 // ═══════════════════════════════════════════════════════════════════
 export function render(s) {
@@ -79,18 +80,22 @@ export function renderAlarmBanner(s) {
 
 export function renderHUD(s) {
   const ss = s.sensors;
-  setText('hud-inlet',  ss.COOLANT_IN?.v.toFixed(1) ?? '---');
-  setText('hud-flux',   ss.NEUTRON_FLUX ? `${ss.NEUTRON_FLUX.v.toFixed(2)}e14` : '---');
-  setText('hud-pump-a', ss.PUMP_A ? Math.round(ss.PUMP_A.v).toLocaleString() : '---');
-  setText('hud-core',   ss.CORE_TEMP?.v.toFixed(1) ?? '---');
-  setText('hud-press',  ss.PRIM_PRESS?.v.toFixed(1) ?? '---');
-  setText('chart1-val', ss.CORE_TEMP?.v.toFixed(1).replace(/\B(?=(\d{3})+(?!\d))/g,',') ?? '---');
-  setText('chart2-val', ss.PRIM_PRESS?.v.toFixed(1) ?? '---');
+  const m  = ConfigService.get('measures') ?? {};   // live setpoints from ConfigService
 
-  // Thermal margin to trip
-  if (ss.CORE_TEMP) {
-    const margin = 1 - (ss.CORE_TEMP.v - 900) / 300;
-    const pctVal = Math.max(0, Math.min(100, margin * 100)).toFixed(0);
+  setText('hud-inlet',  ss.COOLANT_IN?.v?.toFixed(1)  ?? '---');
+  setText('hud-flux',   ss.NEUTRON_FLUX?.v != null ? `${ss.NEUTRON_FLUX.v.toFixed(2)}e14` : '---');
+  setText('hud-pump-a', ss.PUMP_A?.v != null ? Math.round(ss.PUMP_A.v).toLocaleString() : '---');
+  setText('hud-core',   ss.CORE_TEMP?.v?.toFixed(1)   ?? '---');
+  setText('hud-press',  ss.PRIM_PRESS?.v?.toFixed(1)  ?? '---');
+  setText('chart1-val', ss.CORE_TEMP?.v?.toFixed(1).replace(/\B(?=(\d{3})+(?!\d))/g,',') ?? '---');
+  setText('chart2-val', ss.PRIM_PRESS?.v?.toFixed(1)  ?? '---');
+
+  // ── Thermal margin to trip — driven by ConfigService (live setpoints) ────────
+  if (ss.CORE_TEMP?.v != null) {
+    const tripHigh = m.CORE_TEMP?.tripHigh ?? ss.CORE_TEMP.trip ?? 1200;
+    const tripLow  = m.CORE_TEMP?.tripLow  ?? ss.CORE_TEMP.low  ?? 900;
+    const margin   = 1 - (ss.CORE_TEMP.v - tripLow) / Math.max(1, tripHigh - tripLow);
+    const pctVal   = Math.max(0, Math.min(100, margin * 100)).toFixed(0);
     const bar = document.getElementById('margin-bar');
     if (bar) {
       bar.style.width = pctVal + '%';
@@ -99,10 +104,11 @@ export function renderHUD(s) {
     setText('margin-pct', pctVal + '%');
   }
 
-  // Power bar (% of rated from grid output)
-  if (ss.GRID_OUT) {
-    const pwr = Math.min(100, (ss.GRID_OUT.v / 500) * 100);
-    const pb = document.getElementById('power-bar');
+  // ── Power bar (% of rated from ConfigService nominalHigh for GRID_OUT) ───────
+  if (ss.GRID_OUT?.v != null) {
+    const rated = m.GRID_OUT?.nominalHigh ?? 500;
+    const pwr   = Math.min(100, (ss.GRID_OUT.v / rated) * 100);
+    const pb    = document.getElementById('power-bar');
     if (pb) {
       pb.style.width = pwr.toFixed(1) + '%';
       pb.style.background = pwr < 50 ? '#e31a1a' : pwr < 80 ? '#d97d06' : '#159647';
@@ -229,6 +235,14 @@ export function renderCyberPanel(s) {
 }
 
 export function renderCharts(s) {
+  const m = ConfigService.get('measures') ?? {};
+
+  // ── Live setpoints from ConfigService — trip lines move when AS edits them ──
+  const ctLo = m.CORE_TEMP?.tripLow  ?? 900;
+  const ctHi = m.CORE_TEMP?.tripHigh ?? 1200;
+  const ppLo = m.PRIM_PRESS?.tripLow  ?? 150;
+  const ppHi = m.PRIM_PRESS?.tripHigh ?? 250;
+
   const toY = (v, lo, hi) => Math.max(4, Math.min(96, 100 - ((v-lo)/(hi-lo))*84));
 
   function buildPath(data, lo, hi) {
@@ -242,10 +256,22 @@ export function renderCharts(s) {
     return d;
   }
 
-  setAttr('ct-rt',   'd', buildPath(s.histTemp,  900, 1200));
-  setAttr('ct-pred', 'd', buildPred(s.histTemp,  900, 1200));
-  setAttr('cp-rt',   'd', buildPath(s.histPress, 150, 250));
-  setAttr('cp-pred', 'd', buildPred(s.histPress, 150, 250));
+  setAttr('ct-rt',   'd', buildPath(s.histTemp,  ctLo, ctHi));
+  setAttr('ct-pred', 'd', buildPred(s.histTemp,  ctLo, ctHi));
+  setAttr('cp-rt',   'd', buildPath(s.histPress, ppLo, ppHi));
+  setAttr('cp-pred', 'd', buildPred(s.histPress, ppLo, ppHi));
+
+  // Update trip-line Y positions on SVGs (the red dashed lines)
+  const ctTripY = toY(ctHi, ctLo, ctHi + 20).toFixed(1);
+  const ppTripY = toY(ppHi, ppLo, ppHi + 20).toFixed(1);
+  setAttr('ct-trip', 'd', `M 0,${ctTripY} L 300,${ctTripY}`);
+  setAttr('cp-trip', 'd', `M 0,${ppTripY} L 300,${ppTripY}`);
+
+  // Update chart labels with live setpoints
+  const ctLabel = document.getElementById('chart1-trip-label');
+  if (ctLabel) ctLabel.textContent = `TRIP ${ctHi}°C`;
+  const ppLabel = document.getElementById('chart2-trip-label');
+  if (ppLabel) ppLabel.textContent = `TRIP ${ppHi} PSI`;
 }
 
 export function renderAuditPanel(s) {
@@ -294,12 +320,22 @@ export function renderSafetyPanel(s) {
 
   const it = document.getElementById('interlock-table');
   if (it && s.interlocks) {
+    const m = ConfigService.get('measures') ?? {};
+    // Map interlock sensor keys to configService measures for live SP display
+    const spMap = {
+      'T-CORE-01':  m.CORE_TEMP   ? `${m.CORE_TEMP.tripHigh} ${m.CORE_TEMP.unit}`   : null,
+      'F-PRI-01':   m.SEC_FLOW    ? `${m.SEC_FLOW.tripLow} ${m.SEC_FLOW.unit}`       : null,
+      'P-PRI-01':   m.PRIM_PRESS  ? `${m.PRIM_PRESS.tripHigh} ${m.PRIM_PRESS.unit}` : null,
+      'F-NEUT-01':  m.NEUTRON_FLUX? `${m.NEUTRON_FLUX.tripHigh}e14`                 : null,
+      'V-SCR-01':   m.SCRAM_V     ? `< ${m.SCRAM_V.tripLow} ${m.SCRAM_V.unit}`      : null,
+    };
     it.innerHTML = s.interlocks.map(i => {
-      const c = i.st==='OFFLINE'?'#6c757d':i.st==='TRIPPED'?'#e31a1a':'#159647';
+      const c  = i.st==='OFFLINE'?'#6c757d':i.st==='TRIPPED'?'#e31a1a':'#159647';
+      const sp = spMap[i.tag] ?? i.sp;   // live SP from ConfigService, fall back to model
       return `<div class="flex items-center justify-between py-2 border-b border-[rgba(0,0,0,.04)]">
         <div>
           <div class="tv text-[12px] font-bold text-[#212529]">${i.label}</div>
-          <div class="tv text-[11px] text-[#6c757d]">${i.tag} · SP: ${i.sp}</div>
+          <div class="tv text-[11px] text-[#6c757d]">${i.tag} · SP: <span class="font-bold text-[#343a40]">${sp}</span></div>
         </div>
         <span class="tv text-[11px] font-bold px-1.5 py-0.5 shrink-0" style="color:${c};border:1px solid ${c}33">${i.st}</span>
       </div>`;
@@ -315,14 +351,23 @@ export function renderSecondaryStats(s) {
   if (!el) return;
   el.innerHTML = '';
   const ss = s.sensors;
+  const m  = ConfigService.get('measures') ?? {};   // live setpoints
+
+  // Ranges pulled from ConfigService — update live when AS changes thresholds
   [
-    { label:'SG Inlet Temperature', k:'SG_INLET',   pctVal:pct(ss.SG_INLET?.v,  420,550), col:'#cd5c08' },
-    { label:'Steam Pressure',       k:'STEAM_PRESS', pctVal:pct(ss.STEAM_PRESS?.v,130,180),col:'#343a40' },
-    { label:'Turbine Speed',        k:'TURBINE_RPM', pctVal:pct(ss.TURBINE_RPM?.v,2800,3200),col:'#159647'},
-    { label:'Grid Output',          k:'GRID_OUT',    pctVal:pct(ss.GRID_OUT?.v,  400,500), col:'#159647' },
-    { label:'Pump B Speed',         k:'PUMP_B',      pctVal:pct(ss.PUMP_B?.v,    2800,3600),col:'#159647'},
-    { label:'Secondary Flow',       k:'SEC_FLOW',    pctVal:pct(ss.SEC_FLOW?.v,  2400,3200),col:'#343a40'},
-  ].forEach(st => {
+    { label:'SG Inlet Temperature', k:'SG_INLET',   col:'#cd5c08',
+      lo: m.SG_INLET?.tripLow  ?? 420, hi: m.SG_INLET?.tripHigh  ?? 550 },
+    { label:'Steam Pressure',       k:'STEAM_PRESS', col:'#343a40',
+      lo: m.STEAM_PRESS?.tripLow ?? 130, hi: m.STEAM_PRESS?.tripHigh ?? 180 },
+    { label:'Turbine Speed',        k:'TURBINE_RPM', col:'#159647',
+      lo: m.TURBINE_RPM?.tripLow ?? 2800, hi: m.TURBINE_RPM?.tripHigh ?? 3200 },
+    { label:'Grid Output',          k:'GRID_OUT',    col:'#159647',
+      lo: m.GRID_OUT?.tripLow ?? 400, hi: m.GRID_OUT?.tripHigh ?? 510 },
+    { label:'Pump B Speed',         k:'PUMP_B',      col:'#159647',
+      lo: m.PUMP_B?.tripLow ?? 2800, hi: m.PUMP_B?.tripHigh ?? 3600 },
+    { label:'Secondary Flow',       k:'SEC_FLOW',    col:'#343a40',
+      lo: m.SEC_FLOW?.tripLow ?? 2400, hi: m.SEC_FLOW?.tripHigh ?? 3200 },
+  ].map(st => ({ ...st, pctVal: pct(ss[st.k]?.v, st.lo, st.hi) })).forEach(st => {
     const sr = ss[st.k];
     const val = sr ? DAO.fmt(sr) : '--';
     const unit = sr?.u ?? '';

@@ -6,6 +6,7 @@ import { ts, p2, p3, escHtml, dlFile, setText, setAttr } from '../utils.js';
 import { ScenarioEngine } from './scenario-engine.js';
 import { renderDiagnostics } from './views/render.js';
 import { RBACContext, bindGuardedButton } from './rbac-factory.js';
+import { ConfigService } from './config-service.js';
 
 
 // ═══════════════════════════════════════════════════════════════════
@@ -324,34 +325,112 @@ export function resetSessionTimer() {
   }, SESSION_TIMEOUT_MS);
 }
 
+// ── Auto-Alarm Engine ─────────────────────────────────────────────────────────
+// ISA-101 §5.3 / IEC 61511 SIL-2 — check all 16 sensors each tick
+// against live ConfigService setpoints and auto-raise/clear alarms.
+
+// Track which auto-alarms are currently active so we don't spam duplicates
+const _activeAutoAlarms = new Set();
+
+function _runAlarmEngine(snapshot) {
+  if (ScenarioEngine.active) return; // Scenario engine manages its own alarms
+  const measures = ConfigService.get('measures') ?? {};
+
+  Object.entries(snapshot).forEach(([key, sensor]) => {
+    if (sensor?.v == null) return;
+    const cfg = measures[key];
+    if (!cfg) return;
+
+    const { tripHigh, tripLow, priority = 2, tag, unit } = cfg;
+    const v = sensor.v;
+
+    const alarmIdHi = `AUTO-${key}-HI`;
+    const alarmIdLo = `AUTO-${key}-LO`;
+
+    // ── High trip ───────────────────────────────────────────────────
+    if (tripHigh > 0 && v >= tripHigh) {
+      if (!_activeAutoAlarms.has(alarmIdHi) && !S.alarms.find(a => a.id === alarmIdHi && !a.cleared)) {
+        _activeAutoAlarms.add(alarmIdHi);
+        dispatch(A.ADD_ALARM, { alarm: {
+          id: alarmIdHi, p: priority,
+          tag: tag ?? key,
+          msg: `${cfg.label ?? key} exceeded trip high: ${v.toFixed(2)} ${unit} ≥ ${tripHigh} ${unit}`,
+          acked: false, ts: ts(),
+        }});
+      }
+    } else {
+      if (_activeAutoAlarms.has(alarmIdHi)) {
+        _activeAutoAlarms.delete(alarmIdHi);
+        dispatch(A.CLEAR_ALARM, { id: alarmIdHi });
+      }
+    }
+
+    // ── Low trip (only where tripLow > 0 — SCRAM_V, LEAD_LEVEL etc use tripLow) ──
+    if (tripLow > 0 && v <= tripLow) {
+      if (!_activeAutoAlarms.has(alarmIdLo) && !S.alarms.find(a => a.id === alarmIdLo && !a.cleared)) {
+        _activeAutoAlarms.add(alarmIdLo);
+        dispatch(A.ADD_ALARM, { alarm: {
+          id: alarmIdLo, p: priority,
+          tag: tag ?? key,
+          msg: `${cfg.label ?? key} below trip low: ${v.toFixed(2)} ${unit} ≤ ${tripLow} ${unit}`,
+          acked: false, ts: ts(),
+        }});
+      }
+    } else {
+      if (_activeAutoAlarms.has(alarmIdLo)) {
+        _activeAutoAlarms.delete(alarmIdLo);
+        dispatch(A.CLEAR_ALARM, { id: alarmIdLo });
+      }
+    }
+  });
+
+  // ── SCRAM bus undervoltage — Safety-critical (IEC 61511) ─────────────────────
+  const scv = snapshot.SCRAM_V?.v;
+  const scvTrip = measures.SCRAM_V?.tripLow ?? 40;
+  if (scv != null && scv < scvTrip && !S.scramActive) {
+    if (!_activeAutoAlarms.has('AUTO-SCRAM-UV')) {
+      _activeAutoAlarms.add('AUTO-SCRAM-UV');
+      dispatch(A.ADD_ALARM, { alarm: {
+        id: 'AUTO-SCRAM-UV', p: 1,
+        tag: 'V-SCR-01',
+        msg: `SCRAM bus undervoltage: ${scv.toFixed(1)} V < ${scvTrip} V — Auto-SCRAM initiated`,
+        acked: false, ts: ts(),
+      }});
+      dispatch(A.AUTO_SCRAM);
+    }
+  }
+}
+
 export function startDataLoop() {
   setInterval(() => {
     if (!S.role) return;
     DAO.tick(S.scramActive);
-    dispatch(A.TICK, { snapshot: DAO.snapshot() });
+    const snapshot = DAO.snapshot();
+    dispatch(A.TICK, { snapshot });
 
+    // ── Session timeout warning ─────────────────────────────────────────────
     if (S.lastActivity && !_sessionWarnShown) {
       const idleMs = Date.now() - S.lastActivity;
       if (idleMs > SESSION_TIMEOUT_MS - TIMEOUT_WARN_MS) {
         _sessionWarnShown = true;
         showModal({
           icon: 'timer',
-          title: 'Session Timeout',
-          content: '<p>Session about to expire.</p>',
+          title: 'Session Timeout Warning',
+          content: '<p class="tv text-sm text-[#343a40]">Your session will expire in 1 minute due to inactivity.</p>',
           primary: 'STAY LOGGED IN',
           onConfirm: () => { dispatch(A.TOUCH_ACTIVITY); resetSessionTimer(); }
         });
       }
     }
 
-    const ct = S.sensors.CORE_TEMP?.v ?? 0;
-    if (ct > 1150 && !S.alarms.find(a=>a.id==='A-CT-HI') && !ScenarioEngine.active) {
-      dispatch(A.ADD_ALARM, { alarm:{ id:'A-CT-HI', p:1, tag:'T-CORE-01', msg:'Core temp exceeded 1150°C', acked:false, ts:ts() }});
-    }
+    // ── Full auto-alarm engine (all 16 sensors vs live ConfigService) ─────────
+    _runAlarmEngine(snapshot);
 
-    if (S.sensors.PRIM_PRESS) {
-      const delta = (S.sensors.PRIM_PRESS.v - 214.8).toFixed(1);
-      const sign = delta > 0 ? '+' : '';
+    // ── Copilot delta display ─────────────────────────────────────────────────
+    if (snapshot.PRIM_PRESS?.v != null) {
+      const nominal = (ConfigService.get('measures')?.PRIM_PRESS?.nominalHigh) ?? 214.8;
+      const delta = (snapshot.PRIM_PRESS.v - nominal).toFixed(1);
+      const sign  = delta > 0 ? '+' : '';
       const copilotDelta = document.getElementById('copilot-delta');
       if (copilotDelta) copilotDelta.textContent = `${sign}${delta} PSI`;
     }

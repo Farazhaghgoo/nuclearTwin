@@ -37,28 +37,48 @@ function _setPending(sensorKey, field, value) {
   _pendingCount = Object.keys(_pending).reduce((t, k) => t + Object.keys(_pending[k]).length, 0);
 }
 
+// ── Dirty-check signature — only full re-render when these change ─────────────
+// This prevents scroll position from being lost on every 800ms TICK
+let _lastSig = '';
+
+function _sig(s, meta) {
+  return `${s.role}|${s.activePanel}|${s.configActiveTab ?? 'overview'}|${meta.configVersion}|${_pendingCount}`;
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // Main render entry point — called from render.js when activePanel === 'panel-config'
 // ═══════════════════════════════════════════════════════════════════════════════
 export function renderConfigPanel(s) {
-  if (s.activePanel !== 'panel-config') return;
+  if (s.activePanel !== 'panel-config') {
+    // Reset sig so next navigation always re-renders fresh
+    _lastSig = '';
+    return;
+  }
 
   const container = document.getElementById('panel-config');
   if (!container) return;
 
-  // RBAC guard — SCR-14 is AS-only
+  // RBAC guard — SCR-14 is AS-only (OD sees read-only notice)
   if (s.role !== 'AS') {
-    container.innerHTML = `
-      <div class="flex flex-col items-center justify-center h-full gap-4">
-        <span class="ms material-symbols-outlined text-[#e31a1a] text-5xl">lock</span>
-        <div class="tv text-[13px] text-[#e31a1a] font-bold uppercase tracking-widest">Access Denied — CMP-24</div>
-        <div class="tv text-[11px] text-[#6c757d]">System Admin (AS) role required to access Platform Configuration Manager.</div>
-      </div>`;
+    if (_lastSig !== `denied|${s.role}`) {
+      _lastSig = `denied|${s.role}`;
+      container.innerHTML = `
+        <div class="flex flex-col items-center justify-center h-full gap-4">
+          <span class="ms material-symbols-outlined text-[#e31a1a] text-5xl">lock</span>
+          <div class="tv text-[13px] text-[#e31a1a] font-bold uppercase tracking-widest">Access Denied — CMP-24</div>
+          <div class="tv text-[11px] text-[#6c757d]">System Admin (AS) role required to access Platform Configuration Manager.</div>
+        </div>`;
+    }
     return;
   }
 
   const activeTab = s.configActiveTab ?? 'overview';
   const meta = ConfigService.getMeta();
+
+  // ── Dirty check — skip full rebuild if nothing meaningful changed ────────────
+  const sig = _sig(s, meta);
+  if (sig === _lastSig) return;   // ← This is the scroll-reset fix
+  _lastSig = sig;
 
   container.innerHTML = `
     <!-- ── SCR-14 Header ───────────────────────────────────────────────── -->
